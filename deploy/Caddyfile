@@ -3,6 +3,14 @@
 # Requiere que api-clima.anderkitty.pink resuelva a esta VPS (registro A).
 # Hasta que exista, Caddy reintenta el certificado solo; no hay que hacer nada.
 
+{
+	# Fijamos Let's Encrypt producción a propósito. Por defecto Caddy intenta
+	# primero ZeroSSL, que necesita credenciales EAB de un servicio de Caddy
+	# que fue dado de baja: falla con "caddy_legacy_user_removed" y quema
+	# reintentos al pedo. Con esto va derecho a LE.
+	acme_ca https://acme-v02.api.letsencrypt.org/directory
+}
+
 api-clima.anderkitty.pink {
 	encode gzip
 

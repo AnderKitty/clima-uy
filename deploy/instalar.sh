@@ -38,18 +38,37 @@ id -u deploy > /dev/null 2>&1 || useradd --system --create-home --shell /usr/sbi
 chown -R deploy:deploy "$DESTINO"
 install -m 644 "$DESTINO/deploy/clima-uy.service" /etc/systemd/system/clima-uy.service
 
+msg "Caddy: binario actualizado"
+# El paquete de Debian (2.6.2, de 2022) NO puede emitir certificados: intenta
+# ZeroSSL con credenciales EAB de un servicio que Caddy dio de baja y falla con
+# "caddy_legacy_user_removed", más un panic conocido en el worker de certs.
+# Usamos el paquete solo por el usuario/unit y corremos el binario oficial.
+CADDY_VER=${CADDY_VER:-2.11.4}
+if [ "$(/usr/local/bin/caddy version 2>/dev/null | grep -o "v$CADDY_VER" || true)" != "v$CADDY_VER" ]; then
+  TMP=$(mktemp -d)
+  curl -fsSL -o "$TMP/caddy.tar.gz" \
+    "https://github.com/caddyserver/caddy/releases/download/v${CADDY_VER}/caddy_${CADDY_VER}_linux_amd64.tar.gz"
+  tar -xzf "$TMP/caddy.tar.gz" -C "$TMP" caddy
+  install -m 755 "$TMP/caddy" /usr/local/bin/caddy
+  rm -rf "$TMP"
+fi
+/usr/local/bin/caddy version | head -1
+
 msg "Caddy (TLS automático)"
 install -d -m 755 /var/log/caddy
 chown caddy:caddy /var/log/caddy
 install -m 644 "$DESTINO/deploy/Caddyfile" /etc/caddy/Caddyfile
 install -d -m 755 /etc/systemd/system/caddy.service.d
 install -m 644 "$DESTINO/deploy/caddy-limites.conf" /etc/systemd/system/caddy.service.d/limites.conf
-caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+/usr/local/bin/caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 
 msg "Arrancando"
 systemctl daemon-reload
 systemctl enable --now clima-uy.service
-systemctl reload-or-restart caddy.service
+# restart, no reload: un reload le manda el config nuevo al proceso viejo, y si
+# cambió el binario el formato no coincide (p.ej. logger_names pasó de string a
+# array entre 2.6 y 2.11) — falla con HTTP 400 y queda colgado en "reloading".
+systemctl restart caddy.service
 
 sleep 3
 msg "Estado"
