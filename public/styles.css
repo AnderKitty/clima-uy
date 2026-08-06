@@ -454,19 +454,17 @@ th:first-child, td:first-child { text-align: left; }
 }
 @keyframes titilar { 0%, 100% { opacity: .25 } 50% { opacity: .95 } }
 
-.cielo-nubes span {
-  position: absolute; left: 0; border-radius: 50%;
-  /* El desenfoque tiene que ser bastante menor que la nube: si lo iguala, la
-     mancha se convierte en un punto difuso en vez de un banco de nubes. */
-  filter: blur(60px);
-  background: radial-gradient(ellipse at 42% 42%,
-    rgba(255, 255, 255, .9) 0%, rgba(255, 255, 255, .55) 38%, transparent 70%);
+.cielo-nubes .nube {
+  position: absolute; left: 0;
   animation: derivar linear infinite;
   will-change: transform;
 }
+.cielo-nubes .nube svg { display: block; }
+.cielo-defs { position: absolute; }
+
 @keyframes derivar {
-  from { transform: translateX(-60vw) }
-  to   { transform: translateX(160vw) }
+  from { transform: translateX(-30vw) }
+  to   { transform: translateX(130vw) }
 }
 
 .cielo-con-niebla::after {
@@ -538,7 +536,9 @@ main { counter-reset: seccion; }
 @media (max-width: 720px) {
   /* El cielo con blur y lluvia en canvas es caro en un teléfono: bajamos el
      desenfoque de las nubes y el vidrio de los paneles. */
-  .cielo-nubes span { filter: blur(38px); }
+  /* El filtro de ruido es caro en un teléfono: menos nubes y sin deshilachado. */
+  .cielo-nubes .nube:nth-child(n+7) { display: none; }
+  .cielo-nubes .nube svg g { filter: blur(6px) !important; }
   .panel, .hero, .aviso, .error-carga { backdrop-filter: blur(8px); }
 
   .hero-detalle { grid-template-columns: 1fr; }
@@ -572,3 +572,41 @@ main { counter-reset: seccion; }
 
 /* Nada debe desbordar horizontalmente, en ningún ancho. */
 html, body { overflow-x: hidden; }
+
+/* ==========================================================================
+   El hero es la ventana al cielo
+   Sin fondo propio: el cielo animado pasa a través. Es lo único que le da
+   presencia real a la animación — con vidrio encima casi no se percibe.
+   ========================================================================== */
+
+.hero {
+  background: none;
+  backdrop-filter: none;
+  border-color: transparent;
+  box-shadow: none;
+  padding: 46px 28px 40px;
+  min-height: 260px;
+}
+
+/* Sobre cielo variable, el texto necesita su propio contraste. */
+.hero-lugar, .hero-temp, .hero-desc {
+  text-shadow: 0 1px 14px color-mix(in oklab, var(--plano) 75%, transparent);
+}
+.hero-temp { font-size: 4.6rem; font-weight: 200; }
+.hero-lugar { font-size: .95rem; letter-spacing: .04em; text-transform: uppercase; }
+.hero-icono { width: 116px; height: 116px; filter: drop-shadow(0 4px 16px rgba(0, 0, 0, .18)); }
+
+/* Las métricas sí llevan una lámina, si no se pierden contra las nubes. */
+.hero-detalle {
+  background: color-mix(in oklab, var(--superficie) 70%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 6px 18px;
+}
+
+@media (max-width: 720px) {
+  .hero { padding: 30px 18px 26px; min-height: 0; }
+  .hero-temp { font-size: 3.4rem; }
+  .hero-icono { width: 84px; height: 84px; }
+}

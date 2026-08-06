@@ -73,29 +73,61 @@ function montar() {
 }
 
 /**
- * Nubes: muchas manchas grandes, muy desenfocadas y superpuestas.
+ * Nubes en SVG con bordes deshilachados por ruido fractal.
  *
- * Antes eran 6 blobs chicos y opacos, que a simple vista leían como "puntos
- * blancos moviéndose" en vez de nubosidad. La diferencia está en el tamaño
- * (mayor que el desenfoque), la cantidad (que se solapen) y la opacidad baja
- * de cada una: la capa se forma por acumulación, no por manchas sueltas.
+ * Una elipse con `blur` no parece una nube: no tiene silueta, queda una mancha
+ * difusa. Y una silueta con borde limpio parece una calcomanía. Lo que da el
+ * aspecto correcto es una silueta de lóbulos superpuestos deformada con
+ * feTurbulence + feDisplacementMap: el contorno se vuelve irregular y algodonoso
+ * sin perder la forma.
+ *
+ * El filtro se aplica a formas estáticas y solo se anima el `transform` del
+ * grupo, así el navegador cachea el resultado del filtro y no lo recalcula por
+ * cuadro.
  */
+function nubeSilueta(semilla) {
+  // Lóbulos de una nube cúmulo: base ancha y chata, coronas de distinto radio.
+  const lobulos = [
+    [50, 58, 46, 26], [96, 48, 38, 30], [140, 60, 42, 24],
+    [74, 40, 34, 27], [118, 38, 30, 24], [30, 62, 30, 20], [162, 64, 28, 18],
+  ];
+  const r = (n) => ((Math.sin(semilla * 12.9898 + n * 78.233) * 43758.5453) % 1 + 1) % 1;
+
+  const formas = lobulos.map(([cx, cy, rx, ry], i) =>
+    `<ellipse cx="${(cx + (r(i) - .5) * 14).toFixed(1)}" cy="${(cy + (r(i + 9) - .5) * 8).toFixed(1)}" ` +
+    `rx="${(rx * (.85 + r(i + 3) * .4)).toFixed(1)}" ry="${(ry * (.85 + r(i + 5) * .4)).toFixed(1)}"/>`
+  ).join('');
+
+  return `<g filter="url(#deshilachar)">${formas}</g>`;
+}
+
 function nubes() {
-  const capa = [];
-  for (let i = 0; i < 14; i++) {
-    const w = 420 + Math.random() * 520;          // bien más grandes que el blur
-    const h = w * (0.28 + Math.random() * 0.2);   // achatadas, como nubes reales
-    const y = -6 + Math.random() * 66;
-    const dur = 150 + Math.random() * 220;        // lentas: minutos, no segundos
-    const retraso = -Math.random() * dur;         // arrancan repartidas
-    const op = 0.22 + Math.random() * 0.3;
-    capa.push(
-      `<span style="top:${y.toFixed(1)}%;width:${w.toFixed(0)}px;height:${h.toFixed(0)}px;` +
-      `opacity:${op.toFixed(2)};animation-duration:${dur.toFixed(0)}s;` +
-      `animation-delay:${retraso.toFixed(0)}s"></span>`
+  const capas = [];
+  for (let i = 0; i < 9; i++) {
+    const escala = .55 + Math.random() * 1.5;
+    const y = -4 + Math.random() * 62;
+    const dur = 170 + Math.random() * 260;
+    const retraso = -Math.random() * dur;
+    const op = .28 + Math.random() * .42;
+
+    capas.push(
+      `<span class="nube" style="top:${y.toFixed(1)}%;opacity:${op.toFixed(2)};` +
+      `animation-duration:${dur.toFixed(0)}s;animation-delay:${retraso.toFixed(0)}s">` +
+      `<svg viewBox="0 0 200 100" width="${(200 * escala).toFixed(0)}" height="${(100 * escala).toFixed(0)}" ` +
+      `fill="#fff" aria-hidden="true">${nubeSilueta(i + 1)}</svg></span>`
     );
   }
-  return capa.join('');
+
+  // Un solo <defs> para todas: el filtro es caro de declarar por nube.
+  return `<svg width="0" height="0" class="cielo-defs"><defs>
+      <filter id="deshilachar" x="-25%" y="-40%" width="150%" height="180%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.015 0.035"
+                      numOctaves="4" seed="7" result="ruido"/>
+        <feDisplacementMap in="SourceGraphic" in2="ruido" scale="26"
+                           xChannelSelector="R" yChannelSelector="G" result="roto"/>
+        <feGaussianBlur in="roto" stdDeviation="5"/>
+      </filter>
+    </defs></svg>` + capas.join('');
 }
 
 function estrellas(n) {
