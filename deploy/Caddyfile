@@ -1,0 +1,28 @@
+# Clima UY — TLS automático (Let's Encrypt) y proxy al servicio Node.
+#
+# Requiere que api-clima.anderkitty.pink resuelva a esta VPS (registro A).
+# Hasta que exista, Caddy reintenta el certificado solo; no hay que hacer nada.
+
+api-clima.anderkitty.pink {
+	encode gzip
+
+	# La web vive en GitHub Pages, o sea otro origen: sin CORS el navegador
+	# bloquea la respuesta. El servicio Node ya manda el header; acá solo
+	# respondemos el preflight para no despertarlo al pedo.
+	@preflight method OPTIONS
+	handle @preflight {
+		header Access-Control-Allow-Origin "*"
+		header Access-Control-Allow-Methods "GET, OPTIONS"
+		header Access-Control-Max-Age "86400"
+		respond 204
+	}
+
+	reverse_proxy 127.0.0.1:8080
+
+	log {
+		output file /var/log/caddy/clima-uy.log {
+			roll_size 10MiB
+			roll_keep 3
+		}
+	}
+}

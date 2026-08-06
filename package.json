@@ -1,0 +1,15 @@
+{
+  "name": "clima-uy",
+  "version": "1.0.0",
+  "description": "Visor del tiempo en Uruguay sobre los datos publicos de INUMET",
+  "private": true,
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "build": "node tools/generar.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

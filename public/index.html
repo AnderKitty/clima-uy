@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clima UY — el tiempo en Uruguay</title>
+<meta name="description" content="El estado del tiempo en Uruguay, claro y al grano. Datos de INUMET.">
+<!-- Dónde vive la API. En localhost se ignora y va contra el mismo origen,
+     así que para desarrollar no hay que tocar nada. -->
+<meta name="clima-api" content="https://api-clima.anderkitty.pink">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌤️</text></svg>">
+</head>
+<body>
+
+<header class="barra">
+  <div class="marca">
+    <span class="marca-punto" aria-hidden="true"></span>
+    <h1>Clima<span>UY</span></h1>
+  </div>
+  <div class="barra-acciones">
+    <label class="selector">
+      <span class="sr">Estación</span>
+      <select id="estaciones" aria-label="Elegir estación meteorológica"></select>
+    </label>
+    <button id="tema" class="btn-icono" type="button" aria-label="Cambiar tema" title="Cambiar tema"></button>
+  </div>
+</header>
+
+<main id="app">
+  <p class="cargando" id="cargando">Cargando datos de INUMET…</p>
+</main>
+
+<template id="tpl-contenido">
+  <section class="avisos" id="avisos" hidden></section>
+
+  <section class="hero" aria-labelledby="hero-titulo">
+    <div class="hero-principal">
+      <div class="hero-icono" id="hero-icono"></div>
+      <div class="hero-lectura">
+        <p class="hero-lugar" id="hero-titulo"></p>
+        <p class="hero-temp"><span id="hero-temp"></span><span class="grado">°</span></p>
+        <p class="hero-desc" id="hero-desc"></p>
+      </div>
+    </div>
+    <dl class="hero-detalle" id="hero-detalle"></dl>
+  </section>
+
+  <section class="panel" aria-labelledby="t-hoy">
+    <div class="panel-cabecera">
+      <h2 id="t-hoy">Últimas 72 horas</h2>
+      <p class="panel-nota" id="nota-serie"></p>
+    </div>
+    <figure class="grafico">
+      <figcaption class="grafico-titulo">Temperatura del aire <span class="unidad">°C</span></figcaption>
+      <div class="lienzo" id="g-temp"></div>
+    </figure>
+    <figure class="grafico">
+      <figcaption class="grafico-titulo">Precipitación horaria <span class="unidad">mm</span></figcaption>
+      <div class="lienzo lienzo-bajo" id="g-lluvia"></div>
+    </figure>
+    <details class="tabla-alterna">
+      <summary>Ver los datos como tabla</summary>
+      <div class="tabla-envoltorio"><table id="tabla-serie"></table></div>
+    </details>
+  </section>
+
+  <section class="panel" aria-labelledby="t-pron">
+    <div class="panel-cabecera">
+      <h2 id="t-pron">Pronóstico a 7 días</h2>
+      <p class="panel-nota" id="nota-pron"></p>
+    </div>
+    <div class="dias" id="dias"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="t-mapa">
+    <div class="panel-cabecera">
+      <h2 id="t-mapa">Ahora en el país</h2>
+      <p class="panel-nota">Temperatura por estación</p>
+    </div>
+    <div class="mapa-envoltorio"><div id="mapa"></div></div>
+  </section>
+
+  <section class="panel colofon" aria-labelledby="t-como">
+    <div class="panel-cabecera">
+      <h2 id="t-como">Cómo funciona</h2>
+      <p class="panel-nota">De dónde sale cada número</p>
+    </div>
+
+    <p class="colofon-texto">
+      INUMET, el servicio meteorológico nacional, <strong>no publica una API</strong>.
+      Pero su propio sitio se alimenta de unos pocos archivos JSON que quedan
+      accesibles, y este visor los lee de ahí: es <em>web scraping</em>. Un
+      servidor propio consulta esos archivos cada 5 minutos, los normaliza —
+      convierte el viento de nudos a km/h, reordena las series, calcula la
+      sensación térmica, que INUMET no publica— y sirve el resultado ya limpio.
+      El navegador nunca habla con INUMET directamente.
+    </p>
+    <p class="colofon-texto">
+      Todo lo que ves acá es <strong>dato público de INUMET</strong>, reordenado y
+      dibujado distinto. No hay pronóstico propio ni modelo propio: si INUMET dice
+      una cosa, acá dice lo mismo. Para alertas meteorológicas la fuente
+      autoritativa es siempre INUMET — este sitio no es oficial y puede quedar
+      desactualizado si su servidor cambia o deja de responder.
+    </p>
+
+    <h3 class="ficha-titulo">Ficha técnica</h3>
+    <dl class="ficha">
+      <div><dt>Fuente</dt><dd>INUMET (inumet.gub.uy), 4 endpoints internos no documentados</dd></div>
+      <div><dt>Observaciones</dt><dd>84 estaciones, 11 variables, últimas 72 h por hora</dd></div>
+      <div><dt>Pronóstico</dt><dd>7 días × 7 zonas, con mañana y tarde/noche</dd></div>
+      <div><dt>Actualización</dt><dd>Cada 5 min (el origen declara <code>max-age</code> 60–300 s)</dd></div>
+      <div><dt>Avisos</dt><dd>Extraídos del HTML de la portada; no tienen endpoint propio</dd></div>
+      <div><dt>Backend</dt><dd>Node sin dependencias: proxy, caché compartida y normalización</dd></div>
+      <div><dt>Frontend</dt><dd>HTML, CSS y un módulo JS. Sin framework, sin build, sin tracking</dd></div>
+      <div><dt>Gráficos</dt><dd>SVG generado a mano, sin librerías</dd></div>
+      <div><dt>Mapa</dt><dd>geoBoundaries ADM1 (CC BY 4.0, vía OpenStreetMap), simplificado a 41 KB</dd></div>
+      <div><dt>Cálculos propios</dt><dd>Sensación térmica (wind chill JAG/TI y heat index) y zona por cercanía</dd></div>
+    </dl>
+
+    <p class="colofon-nota">
+      Se consulta al origen una sola vez cada 5 minutos y el resultado se comparte
+      entre todos los visitantes: el sitio genera como mucho ~12 pedidos por hora a
+      INUMET sin importar cuánta gente lo use.
+    </p>
+  </section>
+</template>
+
+<footer class="pie">
+  <p>
+    Datos de <a href="https://www.inumet.gub.uy" rel="noopener">INUMET</a>, el servicio
+    meteorológico nacional. Este sitio es un visor independiente y no oficial.
+  </p>
+  <p>
+    Límites departamentales de <a href="https://www.geoboundaries.org" rel="noopener">geoBoundaries</a>
+    (CC BY 4.0), derivados de OpenStreetMap.
+  </p>
+  <p id="pie-actualizado" class="pie-sello"></p>
+</footer>
+
+<script src="app.js" type="module"></script>
+</body>
+</html>

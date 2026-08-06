@@ -1,0 +1,47 @@
+[Unit]
+Description=Clima UY — API de datos de INUMET
+Documentation=https://github.com/AnderKitty/clima-uy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+WorkingDirectory=/opt/clima-uy
+Environment=PORT=8080
+ExecStart=/usr/bin/node --max-old-space-size=128 server.js
+Restart=always
+RestartSec=5
+
+# --- Convivencia con el scanner OSINT ---------------------------------------
+# Esta VPS corre el barrido diario de 2.5M de IPs: 04:00-18:00 hora UY, con
+# pico de 1 GB sobre 1.9 GB totales y SIN SWAP. Ya hubo OOM kills.
+#
+# Estos límites son de cgroup, o sea que actúan sobre ESTE servicio: si se
+# desmadra, el kernel lo mata a él y el scanner ni se entera. Medido: el
+# proceso usa ~93 MB en régimen.
+MemoryHigh=150M
+MemoryMax=192M
+
+# Hay un solo vCPU compartido. Ante contención, el barrido gana siempre.
+Nice=10
+CPUWeight=20
+IOWeight=20
+
+# --- Endurecimiento ---------------------------------------------------------
+# ProtectHome esconde /home/deploy: este servicio no tiene por qué ver el
+# proyecto OSINT ni sus datos.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
