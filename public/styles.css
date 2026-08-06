@@ -424,3 +424,7 @@ th:first-child, td:first-child { text-align: left; }
 
 /* Días sin detalle de INUMET: rótulo corto, deliberadamente más tenue. */
 .dia-desc-breve { color: var(--tinta-3); font-style: italic; }
+
+/* Área bajo alerta: se dibuja sobre los departamentos, dejándolos ver. */
+.mapa-area-alerta { transition: opacity .15s; }
+.mapa-area-alerta:hover { opacity: .75; }

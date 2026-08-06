@@ -725,6 +725,7 @@ function pintarMapa(estaciones) {
 
   const svg = crearSvg(W, H + 44);
   svg.append(capaDepartamentos(X, Y));
+  svg.append(capaAlertas(X, Y));
 
   // Los más extremos arriba: si algo se tapa, que quede visible lo que llama la atención.
   for (const p of puestos.sort((a, b) => Math.abs(a.temp - medio) - Math.abs(b.temp - medio))) {
@@ -757,23 +758,11 @@ function pintarMapa(estaciones) {
 
 const sinTildes = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().trim();
 
-/**
- * Departamento → alerta vigente de mayor nivel, como hace INUMET: el mapa
- * queda dividido y las zonas afectadas se pintan del color de la alerta.
- */
-function alertasPorDepartamento() {
-  const mapa = new Map();
-  const items = [...(estado.avisos?.advertencias ?? []), ...(estado.avisos?.avisos ?? [])];
-
-  for (const a of items) {
-    if (!a.nivel) continue;
-    for (const z of a.zonas ?? []) {
-      const clave = z.id ?? sinTildes(z.departamento);
-      const previo = mapa.get(clave);
-      if (!previo || a.nivel > previo.nivel) mapa.set(clave, a);
-    }
-  }
-  return mapa;
+/** Alertas vigentes, de menor a mayor nivel (las graves se dibujan al final). */
+function alertasVigentes() {
+  return [...(estado.avisos?.advertencias ?? []), ...(estado.avisos?.avisos ?? [])]
+    .filter((a) => a.nivel)
+    .sort((a, b) => a.nivel - b.nivel);
 }
 
 /**
@@ -798,55 +787,84 @@ function patronesAlerta(niveles) {
   return defs;
 }
 
-/** Contorno del país por departamento, pintado según la alerta vigente. */
+const aPath = (anillo, X, Y) =>
+  anillo.map(([lon, lat], i) => `${i ? 'L' : 'M'}${X(lon).toFixed(1)},${Y(lat).toFixed(1)}`).join('') + 'Z';
+
+/** Contorno del país, dividido por departamento. Es el fondo del mapa. */
 function capaDepartamentos(X, Y) {
   const g = el('g', { class: 'mapa-geo' });
   if (!estado.geo?.features) return g;
 
-  const alertas = alertasPorDepartamento();
-
-  const niveles = new Map();
-  for (const a of alertas.values()) niveles.set(a.nivel, a.color);
-  if (niveles.size) g.append(patronesAlerta(niveles));
-
   for (const f of estado.geo.features) {
     const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
-    const d = polys
-      .flatMap((poly) => poly.map((anillo) =>
-        anillo.map(([lon, lat], i) => `${i ? 'L' : 'M'}${X(lon).toFixed(1)},${Y(lat).toFixed(1)}`).join('') + 'Z'))
-      .join('');
+    const d = polys.flatMap((poly) => poly.map((anillo) => aPath(anillo, X, Y))).join('');
 
-    const alerta = alertas.get(sinTildes(f.properties.nombre));
-    const p = el('path', { class: `mapa-depto${alerta ? ' mapa-depto-alerta' : ''}`, d });
-
-    if (alerta) {
-      // Mismo tratamiento que INUMET: relleno translúcido y borde al 100 %.
-      // Va por `style` y no por atributo: un atributo de presentación pierde
-      // contra la regla `.mapa-depto { fill: … }` de la hoja de estilos.
-      p.style.fill = `url(#trama-alerta-${alerta.nivel})`;
-      p.style.fillOpacity = '1';
-      p.style.stroke = alerta.color;
-      p.style.strokeWidth = '1.6';
-    }
-
+    const p = el('path', { class: 'mapa-depto', d });
     const t = el('title');
-    t.textContent = alerta
-      ? `${f.properties.nombre} — alerta ${alerta.nombre}: ${alerta.fenomeno}`
-      : f.properties.nombre;
+    t.textContent = f.properties.nombre;
     p.append(t);
     g.append(p);
   }
   return g;
 }
 
+/**
+ * Área bajo alerta, dibujada con el polígono real de INUMET (`coordsPoligonos`).
+ *
+ * Antes pintaba el departamento entero cuando aparecía en la lista de zonas, y
+ * eso miente: la mayoría de las advertencias cubren solo algunas localidades
+ * ("Tacuarembó : Paso de los Toros, Piedra Sola…" es una franja, no el
+ * departamento). Solo unas pocas dicen "(Todo el departamento)". El polígono
+ * es lo que INUMET dibuja en su propio mapa, así que es lo que corresponde.
+ */
+function capaAlertas(X, Y) {
+  const alertas = alertasVigentes();
+  const g = el('g', { class: 'mapa-alertas' });
+  if (!alertas.length) return g;
+
+  const niveles = new Map();
+  for (const a of alertas) niveles.set(a.nivel, a.color);
+  const defs = patronesAlerta(niveles);
+
+  // El polígono de INUMET es aproximado y se desborda sobre el río y la
+  // frontera. Lo recortamos contra la silueta del país para que la mancha no
+  // aparezca sobre agua.
+  if (estado.geo?.features) {
+    const clip = el('clipPath', { id: 'recorte-pais' });
+    for (const f of estado.geo.features) {
+      const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
+      for (const poly of polys) clip.append(el('path', { d: aPath(poly[0], X, Y) }));
+    }
+    defs.append(clip);
+    g.setAttribute('clip-path', 'url(#recorte-pais)');
+  }
+  g.append(defs);
+
+  for (const a of alertas) {
+    for (const poly of a.poligonos ?? []) {
+      const p = el('path', { class: 'mapa-area-alerta', d: aPath(poly, X, Y) });
+      p.style.fill = `url(#trama-alerta-${a.nivel})`;
+      p.style.stroke = a.color;
+      p.style.strokeWidth = '2';
+
+      const t = el('title');
+      t.textContent = `Alerta ${a.nombre}: ${a.fenomeno}` +
+        (a.comienzo ? ` (${a.comienzo} → ${a.finalizacion ?? ''})` : '');
+      p.append(t);
+      g.append(p);
+    }
+  }
+  return g;
+}
+
 /** Leyenda de alertas: solo aparece si hay alguna vigente. */
 function leyendaAlertas(W, y) {
-  const alertas = alertasPorDepartamento();
-  if (!alertas.size) return null;
+  const alertas = alertasVigentes();
+  if (!alertas.length) return null;
 
   // Un chip por nivel presente, del más grave al más leve.
   const niveles = new Map();
-  for (const a of alertas.values()) if (!niveles.has(a.nivel)) niveles.set(a.nivel, a);
+  for (const a of alertas) if (!niveles.has(a.nivel)) niveles.set(a.nivel, a);
   const orden = [...niveles.entries()].sort((a, b) => b[0] - a[0]);
 
   const g = el('g');
