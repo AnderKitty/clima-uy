@@ -1,5 +1,10 @@
-# Publica solo public/ en GitHub Pages. El backend (server.js, lib/, deploy/)
-# vive en el repo pero no se publica: corre en el VPS.
+# Publica public/ en GitHub Pages empujando a la rama gh-pages.
+#
+# Antes usaba actions/deploy-pages, que después de subir el artefacto se queda
+# esperando a que GitHub confirme el deployment. Con un dominio custom sin
+# certificado emitido esa confirmación no llega nunca: el job muere a los 10
+# minutos con "Timeout reached, aborting!" y el sitio se queda en la versión
+# anterior sin que nada avise. Publicar por rama no depende de esa confirmación.
 name: Deploy Pages
 
 on:
@@ -9,9 +14,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
@@ -20,14 +23,29 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: public
-      - id: deployment
-        uses: actions/deploy-pages@v4
+
+      - name: Publicar public/ en gh-pages
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          rm -rf /tmp/sitio && cp -r public /tmp/sitio
+
+          # Rama huérfana: gh-pages contiene solo el sitio, sin el historial
+          # del backend.
+          git checkout -q --orphan gh-pages-tmp
+          git rm -rqf --cached .
+          find . -maxdepth 1 -not -name '.git' -not -name '.' -exec rm -rf {} +
+          cp -r /tmp/sitio/. .
+
+          # Sin esto Pages corre Jekyll, que ignora los archivos que empiezan
+          # con guion bajo.
+          touch .nojekyll
+
+          git add -A
+          git commit -qm "sitio desde ${GITHUB_SHA::7}"
+          git push -qf origin gh-pages-tmp:gh-pages
+          echo "publicado: $(ls | tr '\n' ' ')"
