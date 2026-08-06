@@ -15,44 +15,104 @@ const estado = {
 // Iconos: un set propio en SVG. No usamos los sprites de INUMET.
 // ---------------------------------------------------------------------------
 
-const SOL = `<circle cx="32" cy="30" r="12" fill="#eda100"/>
-  <g stroke="#eda100" stroke-width="3" stroke-linecap="round">
-    <path d="M32 8v6M32 46v6M10 30h6M48 30h6M16.5 14.5l4 4M43.5 41.5l4 4M47.5 14.5l-4 4M20.5 41.5l-4 4"/>
+// Los degradados van en un <defs> único al principio del documento: repetirlos
+// por icono multiplicaría el markup (hay 8 iconos por pantalla) y los ids
+// duplicados se pisan igual.
+const DEFS_ICONOS = `
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <radialGradient id="g-sol" cx="35%" cy="32%" r="72%">
+    <stop offset="0%" stop-color="#ffe27a"/>
+    <stop offset="55%" stop-color="#fbbf24"/>
+    <stop offset="100%" stop-color="#f59e0b"/>
+  </radialGradient>
+  <linearGradient id="g-nube" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#ffffff"/>
+    <stop offset="55%" stop-color="#e8eef8"/>
+    <stop offset="100%" stop-color="#cbd7e8"/>
+  </linearGradient>
+  <linearGradient id="g-nube-gris" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#c8d0dc"/>
+    <stop offset="55%" stop-color="#aab4c4"/>
+    <stop offset="100%" stop-color="#8f9aab"/>
+  </linearGradient>
+  <linearGradient id="g-nube-tormenta" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#9aa3b2"/>
+    <stop offset="55%" stop-color="#78828f"/>
+    <stop offset="100%" stop-color="#5b6472"/>
+  </linearGradient>
+  <linearGradient id="g-gota" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#7cb8f5"/>
+    <stop offset="100%" stop-color="#2a78d6"/>
+  </linearGradient>
+  <radialGradient id="g-luna" cx="38%" cy="34%" r="70%">
+    <stop offset="0%" stop-color="#f4f7ff"/>
+    <stop offset="100%" stop-color="#c9d6ee"/>
+  </radialGradient>
+</defs></svg>`;
+
+/** Sol: núcleo con degradado y rayos afinados en las puntas. */
+const SOL = (cx = 32, cy = 30, r = 11) => {
+  const rayos = Array.from({ length: 8 }, (_, i) => {
+    const a = (i * 45) * Math.PI / 180;
+    const [x1, y1] = [cx + Math.cos(a) * (r + 4.5), cy + Math.sin(a) * (r + 4.5)];
+    const [x2, y2] = [cx + Math.cos(a) * (r + 9.5), cy + Math.sin(a) * (r + 9.5)];
+    return `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}"/>`;
+  }).join('');
+  return `<g stroke="#fbbf24" stroke-width="3.2" stroke-linecap="round" opacity=".92">${rayos}</g>` +
+    `<circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#g-sol)"/>` +
+    `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#f59e0b" stroke-width=".8" opacity=".45"/>`;
+};
+
+/** Nube de varios lóbulos, con base plana y un realce arriba a la izquierda. */
+const NUBE = (x = 0, y = 0, grad = 'g-nube', s = 1) => `
+  <g transform="translate(${x} ${y})${s !== 1 ? ` scale(${s})` : ''}">
+    <path fill="url(#${grad})" d="M17.5 45.5h29a10.5 10.5 0 0 0 1.2-20.9 15 15 0 0 0-28.3-4.2A11.2 11.2 0 0 0 17.5 45.5Z"/>
+    <path fill="#fff" opacity=".38" d="M22.5 25.9a15 15 0 0 1 17-8.2 15 15 0 0 0-19.1 11.5 11.4 11.4 0 0 1 2.1-3.3Z"/>
   </g>`;
 
-const NUBE = (x = 0, y = 0, c = '#9ec5f4') =>
-  `<path transform="translate(${x} ${y})" fill="${c}" d="M22 46a12 12 0 0 1 .6-23.9A16 16 0 0 1 53 26.4 10 10 0 0 1 52 46z"/>`;
+const GOTAS = (ys) => `<g fill="url(#g-gota)">${ys.map(([x, y, h]) =>
+  `<path d="M${x} ${y}c2.6 3.4 3.9 5.5 3.9 7a3.9 3.9 0 0 1-7.8 0c0-1.5 1.3-3.6 3.9-7Z" transform="translate(0 ${h})"/>`
+).join('')}</g>`;
 
 const ICONOS = {
-  despejado: `<svg viewBox="0 0 64 64" role="img" aria-label="Despejado">${SOL}</svg>`,
+  despejado: `<svg viewBox="0 0 64 64" role="img" aria-label="Despejado">${SOL(32, 32, 13)}</svg>`,
 
   nuboso: `<svg viewBox="0 0 64 64" role="img" aria-label="Parcialmente nuboso">
-    <g transform="translate(6 -4) scale(.72)">${SOL}</g>${NUBE(0, 6)}</svg>`,
+    ${SOL(41, 21, 9)}${NUBE(-2, 6)}</svg>`,
 
   cubierto: `<svg viewBox="0 0 64 64" role="img" aria-label="Cubierto">
-    ${NUBE(-4, -2, '#c3c2b7')}${NUBE(2, 8, '#9ec5f4')}</svg>`,
+    ${NUBE(6, -6, 'g-nube-gris', .82)}${NUBE(-3, 5)}</svg>`,
 
   lluvia: `<svg viewBox="0 0 64 64" role="img" aria-label="Lluvia">
-    ${NUBE(0, -4)}
-    <g stroke="#2a78d6" stroke-width="3" stroke-linecap="round">
-      <path d="M22 50l-3 8M34 50l-3 8M46 50l-3 8"/>
-    </g></svg>`,
+    ${NUBE(-1, -4)}${GOTAS([[23, 47, 0], [32, 47, 4], [41, 47, 0]])}</svg>`,
 
   tormenta: `<svg viewBox="0 0 64 64" role="img" aria-label="Tormenta">
-    ${NUBE(0, -6, '#898781')}
-    <path d="M34 42l-10 14h7l-4 10 13-16h-7l5-8z" fill="#eda100"/>
-    <g stroke="#2a78d6" stroke-width="3" stroke-linecap="round">
-      <path d="M20 46l-3 7M48 46l-3 7"/>
-    </g></svg>`,
+    ${NUBE(-1, -7, 'g-nube-tormenta')}
+    <path d="M35.5 38.5 24 54h7.2l-3 10 13.3-17.4h-7.4l4.4-8.1Z" fill="#fbbf24" stroke="#f59e0b" stroke-width=".8" stroke-linejoin="round"/>
+    ${GOTAS([[20, 44, 0], [46, 44, 0]])}</svg>`,
 
   niebla: `<svg viewBox="0 0 64 64" role="img" aria-label="Niebla">
-    ${NUBE(0, -8, '#c3c2b7')}
-    <g stroke="#898781" stroke-width="3" stroke-linecap="round">
-      <path d="M14 46h36M18 54h30M14 62h26"/>
+    ${NUBE(-1, -11, 'g-nube-gris')}
+    <g stroke="#9aa3b2" stroke-width="3.2" stroke-linecap="round" opacity=".85">
+      <path d="M14 44h36"/><path d="M19 52h30" opacity=".75"/><path d="M14 60h25" opacity=".5"/>
+    </g></svg>`,
+
+  noche: `<svg viewBox="0 0 64 64" role="img" aria-label="Despejado de noche">
+    <path fill="url(#g-luna)" d="M40.5 12a20 20 0 1 0 11.2 26.9A16 16 0 0 1 40.5 12Z"/>
+    <g fill="#b7c6e2" opacity=".55">
+      <circle cx="27" cy="30" r="3.2"/><circle cx="35" cy="41" r="2.1"/><circle cx="23" cy="41" r="1.5"/>
     </g></svg>`,
 };
 
 const icono = (nombre) => ICONOS[nombre] ?? ICONOS.nuboso;
+
+/** INUMET solo detalla los primeros 3 días; para el resto hay que rotular a
+ *  partir del código de estado, que es lo único que manda. */
+const ETIQUETA_ICONO = {
+  despejado: 'Despejado', noche: 'Despejado', nuboso: 'Algo nuboso',
+  cubierto: 'Cubierto', lluvia: 'Precipitaciones', tormenta: 'Tormentas',
+  niebla: 'Nieblas',
+};
 
 // ---------------------------------------------------------------------------
 // Formato
@@ -121,9 +181,11 @@ async function iniciar() {
     estado.estaciones = ahora.estaciones;
     estado.pronostico = pron;
     estado.geo = geo;
+    estado.avisos = avisos;
 
     if (!estado.estaciones.length) throw new Error('INUMET no devolvió estaciones con datos');
 
+    document.body.insertAdjacentHTML('afterbegin', DEFS_ICONOS);
     $('#app').replaceChildren($('#tpl-contenido').content.cloneNode(true));
 
     llenarSelector();
@@ -218,7 +280,7 @@ function iconoObservado(e) {
   if (e.visibilidad !== null && e.visibilidad < 1) return 'niebla';
   if (e.humedad !== null && e.humedad >= 97) return 'cubierto';
   if (e.humedad !== null && e.humedad >= 85) return 'nuboso';
-  return esDeNoche() ? 'despejado' : 'despejado';
+  return esDeNoche() ? 'noche' : 'despejado';
 }
 
 function esDeNoche() {
@@ -531,8 +593,12 @@ function pintarPronostico(est) {
                  nodo('span', 'dia-min', `${d.tempMin ?? '—'}°`));
     art.append(temps);
 
-    art.append(nodo('p', 'dia-desc',
-      [d.periodos[0]?.descripcion, d.periodos[0]?.evolucion].filter(Boolean).join(' ')));
+    const detalle = [d.periodos[0]?.descripcion, d.periodos[0]?.evolucion].filter(Boolean).join(' ');
+    art.append(detalle
+      ? nodo('p', 'dia-desc', detalle)
+      // Sin detalle: rotulamos con el código de estado en vez de dejar el
+      // hueco, que parecía la tarjeta rota.
+      : nodo('p', 'dia-desc dia-desc-breve', ETIQUETA_ICONO[d.icono] ?? '—'));
 
     art.title = d.periodos
       .map((pe) => `${pe.periodo}: ${[pe.descripcion, pe.evolucion, pe.extra].filter(Boolean).join(' ')}\nViento: ${pe.vientos}`)
@@ -560,14 +626,22 @@ function pintarAvisos(datos) {
 
   cont.hidden = false;
   cont.replaceChildren(...items.map((a) => {
-    // INUMET no publica el nivel de color en este JSON: una advertencia pesa
-    // más que un aviso, así que ese es el criterio del tono.
-    const div = nodo('div', `aviso aviso-${a.tipo === 'aviso' ? 'amarilla' : 'naranja'}`);
+    // El nivel sale de riesgoFenomeno y el color es el mismo que usa INUMET.
+    const div = nodo('div', `aviso aviso-${a.nombre ?? 'amarilla'}`);
+    if (a.color) div.style.setProperty('--tono', a.color);
     div.append(Object.assign(nodo('span', 'aviso-icono', '⚠'), { ariaHidden: 'true' }));
 
     const cuerpo = nodo('div', 'aviso-cuerpo');
-    cuerpo.append(nodo('p', 'aviso-titulo',
-      `${a.tipo === 'aviso' ? 'Aviso' : 'Advertencia'}${a.fenomeno ? `: ${a.fenomeno}` : ''}`));
+    const titulo = a.nombre ? `Alerta ${a.nombre}` : (a.tipo === 'aviso' ? 'Aviso' : 'Advertencia');
+    cuerpo.append(nodo('p', 'aviso-titulo', `${titulo}${a.fenomeno ? ` · ${a.fenomeno}` : ''}`));
+
+    if (a.fenomenos?.length || a.probabilidad) {
+      const meta = [
+        a.fenomenos?.length ? a.fenomenos.map((f) => f.tipo).join(' y ') : null,
+        a.probabilidad ? `probabilidad ${a.probabilidad}` : null,
+      ].filter(Boolean).join(' · ');
+      cuerpo.append(nodo('p', 'aviso-meta', capital(meta)));
+    }
 
     if (a.descripcion) {
       // El texto trae saltos de línea reales; los respetamos sin inyectar HTML.
@@ -670,15 +744,70 @@ function pintarMapa(estaciones) {
     svg.append(g);
   }
 
-  svg.append(leyendaTemp(temps[0], medio, temps[temps.length - 1], rango, W, H + 14));
+  const leyAlertas = leyendaAlertas(W, H + 14);
+  if (leyAlertas) {
+    svg.append(leyAlertas);
+    svg.append(leyendaTemp(temps[0], medio, temps[temps.length - 1], rango, W, H + 44));
+    svg.setAttribute('viewBox', `0 0 ${W} ${H + 74}`);
+  } else {
+    svg.append(leyendaTemp(temps[0], medio, temps[temps.length - 1], rango, W, H + 14));
+  }
   cont.replaceChildren(svg);
 }
 
-/** Contorno del país por departamento. Se dibuja debajo de los puntos y es
- *  puramente contexto: sin interacción y con tinta recesiva. */
+const sinTildes = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().trim();
+
+/**
+ * Departamento → alerta vigente de mayor nivel, como hace INUMET: el mapa
+ * queda dividido y las zonas afectadas se pintan del color de la alerta.
+ */
+function alertasPorDepartamento() {
+  const mapa = new Map();
+  const items = [...(estado.avisos?.advertencias ?? []), ...(estado.avisos?.avisos ?? [])];
+
+  for (const a of items) {
+    if (!a.nivel) continue;
+    for (const z of a.zonas ?? []) {
+      const clave = z.id ?? sinTildes(z.departamento);
+      const previo = mapa.get(clave);
+      if (!previo || a.nivel > previo.nivel) mapa.set(clave, a);
+    }
+  }
+  return mapa;
+}
+
+/**
+ * Trama diagonal para los departamentos en alerta. El color solo no alcanza:
+ * el naranja de una alerta y el naranja de "hace calor" conviven en el mismo
+ * mapa, y sin una segunda señal se confunden. Con rayado, la alerta se lee
+ * aunque el punto de temperatura tenga el mismo tono.
+ */
+function patronesAlerta(niveles) {
+  const defs = el('defs');
+  for (const [nivel, color] of niveles) {
+    const p = el('pattern', {
+      id: `trama-alerta-${nivel}`, width: 9, height: 9,
+      patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)',
+    });
+    p.append(el('rect', { width: 9, height: 9, fill: color, 'fill-opacity': '.20' }));
+    p.append(el('line', {
+      x1: 0, y1: 0, x2: 0, y2: 9, stroke: color, 'stroke-width': 3.2, 'stroke-opacity': '.42',
+    }));
+    defs.append(p);
+  }
+  return defs;
+}
+
+/** Contorno del país por departamento, pintado según la alerta vigente. */
 function capaDepartamentos(X, Y) {
   const g = el('g', { class: 'mapa-geo' });
   if (!estado.geo?.features) return g;
+
+  const alertas = alertasPorDepartamento();
+
+  const niveles = new Map();
+  for (const a of alertas.values()) niveles.set(a.nivel, a.color);
+  if (niveles.size) g.append(patronesAlerta(niveles));
 
   for (const f of estado.geo.features) {
     const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
@@ -687,12 +816,54 @@ function capaDepartamentos(X, Y) {
         anillo.map(([lon, lat], i) => `${i ? 'L' : 'M'}${X(lon).toFixed(1)},${Y(lat).toFixed(1)}`).join('') + 'Z'))
       .join('');
 
-    const p = el('path', { class: 'mapa-depto', d });
+    const alerta = alertas.get(sinTildes(f.properties.nombre));
+    const p = el('path', { class: `mapa-depto${alerta ? ' mapa-depto-alerta' : ''}`, d });
+
+    if (alerta) {
+      // Mismo tratamiento que INUMET: relleno translúcido y borde al 100 %.
+      // Va por `style` y no por atributo: un atributo de presentación pierde
+      // contra la regla `.mapa-depto { fill: … }` de la hoja de estilos.
+      p.style.fill = `url(#trama-alerta-${alerta.nivel})`;
+      p.style.fillOpacity = '1';
+      p.style.stroke = alerta.color;
+      p.style.strokeWidth = '1.6';
+    }
+
     const t = el('title');
-    t.textContent = f.properties.nombre;
+    t.textContent = alerta
+      ? `${f.properties.nombre} — alerta ${alerta.nombre}: ${alerta.fenomeno}`
+      : f.properties.nombre;
     p.append(t);
     g.append(p);
   }
+  return g;
+}
+
+/** Leyenda de alertas: solo aparece si hay alguna vigente. */
+function leyendaAlertas(W, y) {
+  const alertas = alertasPorDepartamento();
+  if (!alertas.size) return null;
+
+  // Un chip por nivel presente, del más grave al más leve.
+  const niveles = new Map();
+  for (const a of alertas.values()) if (!niveles.has(a.nivel)) niveles.set(a.nivel, a);
+  const orden = [...niveles.entries()].sort((a, b) => b[0] - a[0]);
+
+  const g = el('g');
+  const anchoChip = 132;
+  const x0 = W / 2 - (orden.length * anchoChip) / 2;
+
+  orden.forEach(([, a], i) => {
+    const x = x0 + i * anchoChip;
+    // La muestra usa la misma trama que el mapa, no un color plano.
+    g.append(el('rect', {
+      x, y, width: 13, height: 13, rx: 3,
+      fill: `url(#trama-alerta-${a.nivel})`, stroke: a.color, 'stroke-width': '1.6',
+    }));
+    const t = el('text', { class: 'marca-txt', x: x + 19, y: y + 10.5 });
+    t.textContent = `Alerta ${a.nombre}`;
+    g.append(t);
+  });
   return g;
 }
 

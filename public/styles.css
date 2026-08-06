@@ -417,3 +417,10 @@ th:first-child, td:first-child { text-align: left; }
   word-break: break-all;
 }
 .error-pista { margin: 0; font-size: .82rem; color: var(--tinta-3); line-height: 1.55; }
+
+/* Departamento bajo alerta: el color lo pone el JS con el valor de INUMET. */
+.mapa-depto-alerta { transition: fill-opacity .15s; }
+.mapa-depto-alerta:hover { fill-opacity: .5 !important; }
+
+/* Días sin detalle de INUMET: rótulo corto, deliberadamente más tenue. */
+.dia-desc-breve { color: var(--tinta-3); font-style: italic; }
