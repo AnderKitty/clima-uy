@@ -428,3 +428,147 @@ th:first-child, td:first-child { text-align: left; }
 /* Área bajo alerta: se dibuja sobre los departamentos, dejándolos ver. */
 .mapa-area-alerta { transition: opacity .15s; }
 .mapa-area-alerta:hover { opacity: .75; }
+
+/* ==========================================================================
+   Cielo ambiental
+   Capas fijas detrás de todo. Es atmósfera, no dato: nunca compite con los
+   números, que van sobre paneles con fondo propio.
+   ========================================================================== */
+
+.cielo { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.cielo > * { position: absolute; inset: 0; }
+
+.cielo-grad { transition: background 1.2s ease; }
+
+.cielo-astro {
+  inset: auto; border-radius: 50%;
+  transition: opacity 1.2s ease, background 1.2s ease;
+  will-change: opacity;
+}
+
+.cielo-estrellas, .cielo-nubes { transition: opacity 1.2s ease; }
+
+.cielo-estrellas span {
+  position: absolute; border-radius: 50%; background: #fff;
+  animation: titilar 3s ease-in-out infinite;
+}
+@keyframes titilar { 0%, 100% { opacity: .25 } 50% { opacity: .95 } }
+
+.cielo-nubes span {
+  position: absolute; left: 0; border-radius: 50%;
+  /* El desenfoque tiene que ser bastante menor que la nube: si lo iguala, la
+     mancha se convierte en un punto difuso en vez de un banco de nubes. */
+  filter: blur(60px);
+  background: radial-gradient(ellipse at 42% 42%,
+    rgba(255, 255, 255, .9) 0%, rgba(255, 255, 255, .55) 38%, transparent 70%);
+  animation: derivar linear infinite;
+  will-change: transform;
+}
+@keyframes derivar {
+  from { transform: translateX(-60vw) }
+  to   { transform: translateX(160vw) }
+}
+
+.cielo-con-niebla::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent, rgba(226, 232, 240, .45) 60%, rgba(226, 232, 240, .62));
+  backdrop-filter: blur(1.5px);
+}
+
+.cielo-lluvia { width: 100%; height: 100%; opacity: 0; transition: opacity .8s ease; }
+
+.cielo-flash {
+  background: radial-gradient(120% 80% at 60% 10%, rgba(210, 225, 255, .9), transparent 60%);
+  opacity: 0; mix-blend-mode: screen;
+}
+
+/* Con el cielo detrás, los paneles se despegan del fondo. */
+body { background: transparent; }
+.panel, .hero, .aviso, .error-carga {
+  backdrop-filter: blur(14px) saturate(1.1);
+  background-color: color-mix(in oklab, var(--superficie) 82%, transparent);
+}
+.hero { background-image: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cielo-nubes span, .cielo-estrellas span { animation: none; }
+  .cielo-lluvia { display: none; }
+}
+
+/* ==========================================================================
+   Layout en grilla — antes era una sola columna larguísima
+   ========================================================================== */
+
+@media (min-width: 1000px) {
+  main {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 20px;
+  }
+  /* A todo lo ancho: lo que necesita aire horizontal. */
+  .avisos, .hero, .panel-pronostico, .colofon { grid-column: 1 / -1; }
+  /* Las series y el mapa conviven lado a lado en vez de apilarse. */
+  .panel-series { grid-column: 1; }
+  /* Sin sticky: el panel del mapa es más alto que muchas pantallas y al
+     scrollear se traba a mitad de camino en vez de acompañar. Un sticky solo
+     sirve si el elemento entra entero en el viewport. */
+  .panel-mapa { grid-column: 2; }
+}
+
+/* Numeración de secciones, para que la lectura tenga orden. */
+.panel-cabecera { counter-increment: seccion; }
+.panel h2::before {
+  content: '0' counter(seccion);
+  margin-right: 10px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: var(--amb, var(--serie-1));
+  opacity: .8;
+}
+main { counter-reset: seccion; }
+
+/* El acento del sitio sigue al cielo. */
+.marca-punto { background: var(--amb, var(--serie-1)); }
+
+/* ==========================================================================
+   Móvil
+   ========================================================================== */
+
+@media (max-width: 720px) {
+  /* El cielo con blur y lluvia en canvas es caro en un teléfono: bajamos el
+     desenfoque de las nubes y el vidrio de los paneles. */
+  .cielo-nubes span { filter: blur(38px); }
+  .panel, .hero, .aviso, .error-carga { backdrop-filter: blur(8px); }
+
+  .hero-detalle { grid-template-columns: 1fr; }
+  .hero-principal { gap: 14px; }
+  .hero-temp { font-size: 2.8rem; }
+
+  /* Tarjetas del pronóstico: en vez de apretarse a 7 por fila, se deslizan. */
+  .dias {
+    display: flex; overflow-x: auto; gap: 10px;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 6px;
+    margin-inline: -16px; padding-inline: 16px;
+    scrollbar-width: thin;
+  }
+  .dia { flex: 0 0 132px; scroll-snap-align: start; }
+
+  .ficha > div { grid-template-columns: 1fr; gap: 2px; padding: 10px 0; }
+  .panel h2::before { margin-right: 6px; }
+  .barra { gap: 10px; }
+  /* La fila de acciones ocupa el ancho completo y el selector es lo elástico:
+     sin esto el select empuja el botón de tema fuera de pantalla, y como el
+     body no scrollea en horizontal, el botón directamente desaparecía. */
+  .barra-acciones { width: 100%; }
+  .selector { flex: 1; min-width: 0; }
+  .selector select { max-width: 100%; width: 100%; }
+  .marca h1 { font-size: 1.05rem; }
+
+  /* La tabla de datos no debe empujar el ancho de la página. */
+  .tabla-envoltorio { margin-inline: -16px; padding-inline: 16px; }
+}
+
+/* Nada debe desbordar horizontalmente, en ningún ancho. */
+html, body { overflow-x: hidden; }

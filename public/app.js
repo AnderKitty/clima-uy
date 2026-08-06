@@ -1,5 +1,7 @@
 // Clima UY — toda la UI. Sin dependencias: fetch + SVG a mano.
 
+import { aplicarCielo } from './cielo.js';
+
 const $ = (sel, raiz = document) => raiz.querySelector(sel);
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -198,6 +200,17 @@ async function iniciar() {
 
     await elegir(estacionInicial());
     window.addEventListener('resize', redibujarGraficos, { passive: true });
+
+    // Enganche de depuración, solo en local: permite inspeccionar el estado y
+    // forzar escenarios (dos alertas superpuestas, por ejemplo) sin esperar a
+    // que la realidad los produzca.
+    if (['localhost', '127.0.0.1'].includes(location.hostname)) {
+      window.clima = {
+        estado,
+        repintarMapa: () => pintarMapa(estado.estaciones.filter((e) => e.pais === 'UY')),
+        repintarAvisos: () => pintarAvisos(estado.avisos),
+      };
+    }
   } catch (err) {
     const caja = nodo('div', 'error-carga');
     caja.append(nodo('p', 'error-titulo', 'No se pudieron cargar los datos'));
@@ -257,6 +270,7 @@ async function elegir(id) {
 
   pintarHero(estado.seleccionada);
   pintarPronostico(estado.seleccionada);
+  refrescarCielo();
 
   estado.serie = null;
   redibujarGraficos();
@@ -280,12 +294,30 @@ function iconoObservado(e) {
   if (e.visibilidad !== null && e.visibilidad < 1) return 'niebla';
   if (e.humedad !== null && e.humedad >= 97) return 'cubierto';
   if (e.humedad !== null && e.humedad >= 85) return 'nuboso';
-  return esDeNoche() ? 'noche' : 'despejado';
+  return uiEnOscuro() ? 'noche' : 'despejado';
 }
 
 function esDeNoche() {
   const h = Number(nHora.format(new Date()).slice(0, 2));
   return h < 7 || h >= 19;
+}
+
+/**
+ * ¿La interfaz está renderizando en oscuro?
+ *
+ * El cielo tiene que usar SIEMPRE esta respuesta y no la hora: si va por el
+ * reloj, a las 11 de la mañana con tema oscuro queda un cielo diurno claro
+ * detrás de paneles oscuros. Atado al tema, nunca pueden discrepar.
+ */
+function uiEnOscuro() {
+  const t = document.documentElement.dataset.tema;
+  if (t) return t === 'oscuro';
+  return matchMedia('(prefers-color-scheme: dark)').matches || esDeNoche();
+}
+
+/** Repinta el cielo con la condición de la estación elegida. */
+function refrescarCielo() {
+  if (estado.seleccionada) aplicarCielo(iconoObservado(estado.seleccionada), uiEnOscuro());
 }
 
 function pintarHero(e) {
@@ -771,16 +803,23 @@ function alertasVigentes() {
  * mapa, y sin una segunda señal se confunden. Con rayado, la alerta se lee
  * aunque el punto de temperatura tenga el mismo tono.
  */
+/** Un ángulo por nivel: cuando dos alertas se solapan, las tramas se cruzan y
+ *  se ve que hay dos, en vez de una sola mancha más oscura. */
+const ANGULO_TRAMA = { 2: 45, 3: -45, 4: 90 };
+
 function patronesAlerta(niveles) {
   const defs = el('defs');
   for (const [nivel, color] of niveles) {
     const p = el('pattern', {
       id: `trama-alerta-${nivel}`, width: 9, height: 9,
-      patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)',
+      patternUnits: 'userSpaceOnUse',
+      patternTransform: `rotate(${ANGULO_TRAMA[nivel] ?? 45})`,
     });
-    p.append(el('rect', { width: 9, height: 9, fill: color, 'fill-opacity': '.20' }));
+    // Suave a propósito: la mancha es contexto, los puntos de temperatura son
+    // el dato. El borde grueso es el que marca el área, no el relleno.
+    p.append(el('rect', { width: 9, height: 9, fill: color, 'fill-opacity': '.10' }));
     p.append(el('line', {
-      x1: 0, y1: 0, x2: 0, y2: 9, stroke: color, 'stroke-width': 3.2, 'stroke-opacity': '.42',
+      x1: 0, y1: 0, x2: 0, y2: 9, stroke: color, 'stroke-width': 2.4, 'stroke-opacity': '.26',
     }));
     defs.append(p);
   }
@@ -845,7 +884,7 @@ function capaAlertas(X, Y) {
       const p = el('path', { class: 'mapa-area-alerta', d: aPath(poly, X, Y) });
       p.style.fill = `url(#trama-alerta-${a.nivel})`;
       p.style.stroke = a.color;
-      p.style.strokeWidth = '2';
+      p.style.strokeWidth = '2.6';
 
       const t = el('title');
       t.textContent = `Alerta ${a.nombre}: ${a.fenomeno}` +
@@ -961,6 +1000,7 @@ function alternarTema() {
   const siguiente = actual ? (actual === 'oscuro' ? 'claro' : 'oscuro') : (sistemaOscuro ? 'claro' : 'oscuro');
   localStorage.setItem('tema', siguiente);
   aplicarTema(siguiente);
+  refrescarCielo();
   if (estado.serie) redibujarGraficos();
 }
 
