@@ -89,8 +89,20 @@ const API = (() => {
 
 async function json(ruta) {
   const url = ruta.startsWith('uruguay.json') ? ruta : API + ruta;   // el mapa viaja con la web
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`${ruta} → HTTP ${r.status}`);
+
+  // Con timeout a propósito: `fetch` no trae uno, así que una conexión colgada
+  // (DNS viejo apuntando a una IP muerta, por ejemplo) deja la promesa sin
+  // resolver para siempre y la página se queda en "Cargando…" sin decir nada.
+  let r;
+  try {
+    r = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+  } catch (err) {
+    const motivo = err.name === 'TimeoutError'
+      ? 'no respondió en 15 s'
+      : 'no se pudo conectar';
+    throw new Error(`${url} ${motivo}`, { cause: err });
+  }
+  if (!r.ok) throw new Error(`${url} → HTTP ${r.status}`);
   return r.json();
 }
 
@@ -125,8 +137,15 @@ async function iniciar() {
     await elegir(estacionInicial());
     window.addEventListener('resize', redibujarGraficos, { passive: true });
   } catch (err) {
-    $('#app').innerHTML =
-      `<p class="cargando">No se pudieron cargar los datos.<br><small>${err.message}</small></p>`;
+    const caja = nodo('div', 'error-carga');
+    caja.append(nodo('p', 'error-titulo', 'No se pudieron cargar los datos'));
+    caja.append(nodo('p', 'error-detalle', err.message));
+    if (API) {
+      caja.append(nodo('p', 'error-pista',
+        `La web anda, pero la API en ${new URL(API).hostname} no contesta. ` +
+        'Puede ser que tu DNS todavía tenga cacheada una dirección vieja.'));
+    }
+    $('#app').replaceChildren(caja);
     console.error(err);
   }
 }

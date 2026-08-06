@@ -399,3 +399,21 @@ th:first-child, td:first-child { text-align: left; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* ---------- error de carga ---------- */
+
+.error-carga {
+  max-width: 62ch; margin: 48px auto; padding: 22px 24px;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-left: 4px solid var(--alerta-naranja);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+}
+.error-titulo { margin: 0 0 8px; font-size: .95rem; font-weight: 620; }
+.error-detalle {
+  margin: 0 0 10px; font-size: .82rem; color: var(--tinta-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  word-break: break-all;
+}
+.error-pista { margin: 0; font-size: .82rem; color: var(--tinta-3); line-height: 1.55; }
