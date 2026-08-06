@@ -1,73 +1,38 @@
 /* Clima UY — hoja única. Roles por variable para que el tema cambie en un lugar. */
 
+/* El sitio es oscuro, como la maqueta: el cielo animado es navy en todas las
+   condiciones y un panel claro encima no cierra. El botón de la barra ya no
+   cambia el tema sino el momento del cielo (día / noche). */
 :root {
-  color-scheme: light;
-
-  --plano:        #f4f4f1;
-  --superficie:   #fcfcfb;
-  --superficie-2: #f0efec;
-  --tinta:        #0b0b0b;
-  --tinta-2:      #52514e;
-  --tinta-3:      #898781;
-  --linea:        #e1e0d9;
-  --borde:        rgba(11, 11, 11, .10);
-
-  --serie-1:      #2a78d6;   /* temperatura */
-  --serie-lluvia: #1baf7a;   /* precipitación */
-  --grid:         #e1e0d9;
-  --eje:          #c3c2b7;
-
-  --alerta-amarilla: #fab219;
-  --alerta-naranja:  #ec835a;
-  --alerta-roja:     #d03b3b;
-
-  --sombra: 0 1px 2px rgba(11, 11, 11, .04), 0 8px 24px -12px rgba(11, 11, 11, .18);
-  --radio: 14px;
-  --ancho: 1080px;
-
-  --cielo-a: #cde2fb;
-  --cielo-b: #eaf3fd;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-tema="claro"]) {
-    color-scheme: dark;
-    --plano:        #0d0d0d;
-    --superficie:   #1a1a19;
-    --superficie-2: #232321;
-    --tinta:        #ffffff;
-    --tinta-2:      #c3c2b7;
-    --tinta-3:      #898781;
-    --linea:        #2c2c2a;
-    --borde:        rgba(255, 255, 255, .10);
-    --serie-1:      #3987e5;
-    --serie-lluvia: #199e70;
-    --grid:         #2c2c2a;
-    --eje:          #383835;
-    --sombra: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -12px rgba(0, 0, 0, .7);
-    --cielo-a: #16314f;
-    --cielo-b: #101d2c;
-  }
-}
-
-:root[data-tema="oscuro"] {
   color-scheme: dark;
-  --plano:        #0d0d0d;
-  --superficie:   #1a1a19;
-  --superficie-2: #232321;
-  --tinta:        #ffffff;
-  --tinta-2:      #c3c2b7;
-  --tinta-3:      #898781;
-  --linea:        #2c2c2a;
-  --borde:        rgba(255, 255, 255, .10);
-  --serie-1:      #3987e5;
-  --serie-lluvia: #199e70;
-  --grid:         #2c2c2a;
-  --eje:          #383835;
-  --sombra: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -12px rgba(0, 0, 0, .7);
+
+  --plano:        #0b0f18;
+  --superficie:   #131a26;
+  --superficie-2: #1c2534;
+  --tinta:        #eaf0fb;
+  --tinta-2:      #aebbd6;
+  --tinta-3:      #7e8ca6;
+  --linea:        #232d3d;
+  --borde:        rgba(174, 187, 214, .16);
+
+  --serie-1:      #6ea8f0;
+  --serie-lluvia: #35c79a;
+  --grid:         #202a39;
+  --eje:          #2c3849;
+
+  --alerta-amarilla: #FFD800;
+  --alerta-naranja:  #FF6A00;
+  --alerta-roja:     #E00000;
+
+  --sombra: 0 1px 2px rgba(0, 0, 0, .35), 0 12px 32px -14px rgba(0, 0, 0, .7);
+  --radio: 14px;
+  --ancho: 1120px;
+
   --cielo-a: #16314f;
   --cielo-b: #101d2c;
 }
+
+
 
 * { box-sizing: border-box; }
 
@@ -455,16 +420,20 @@ th:first-child, td:first-child { text-align: left; }
 @keyframes titilar { 0%, 100% { opacity: .25 } 50% { opacity: .95 } }
 
 .cielo-nubes .nube {
-  position: absolute; left: 0;
+  position: absolute; left: -30%;
+  border-radius: 50%;
+  filter: blur(30px);
+  /* Gris azulado, no blanco: es lo que las hace leer como bruma en vez de
+     como manchas. Los tonos son los de la maqueta original. */
+  background: radial-gradient(circle at 40% 40%,
+    var(--nube-a, rgba(214, 224, 250, .85)),
+    var(--nube-b, rgba(150, 168, 205, .32)) 70%, transparent 72%);
   animation: derivar linear infinite;
   will-change: transform;
 }
-.cielo-nubes .nube svg { display: block; }
-.cielo-defs { position: absolute; }
-
 @keyframes derivar {
-  from { transform: translateX(-30vw) }
-  to   { transform: translateX(130vw) }
+  from { transform: translateX(0) }
+  to   { transform: translateX(160vw) }
 }
 
 .cielo-con-niebla::after {
@@ -489,7 +458,7 @@ body { background: transparent; }
 .hero { background-image: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  .cielo-nubes span, .cielo-estrellas span { animation: none; }
+  .cielo-nubes .nube, .cielo-estrellas span { animation: none; }
   .cielo-lluvia { display: none; }
 }
 
@@ -537,8 +506,7 @@ main { counter-reset: seccion; }
   /* El cielo con blur y lluvia en canvas es caro en un teléfono: bajamos el
      desenfoque de las nubes y el vidrio de los paneles. */
   /* El filtro de ruido es caro en un teléfono: menos nubes y sin deshilachado. */
-  .cielo-nubes .nube:nth-child(n+7) { display: none; }
-  .cielo-nubes .nube svg g { filter: blur(6px) !important; }
+  .cielo-nubes .nube { filter: blur(20px); }
   .panel, .hero, .aviso, .error-carga { backdrop-filter: blur(8px); }
 
   .hero-detalle { grid-template-columns: 1fr; }

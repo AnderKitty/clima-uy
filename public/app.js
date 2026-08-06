@@ -310,9 +310,11 @@ function esDeNoche() {
  * detrás de paneles oscuros. Atado al tema, nunca pueden discrepar.
  */
 function uiEnOscuro() {
+  // Ya no es "tema": la interfaz siempre es oscura. Esto decide si el cielo
+  // usa su variante nocturna. Por defecto sigue a la hora real de Uruguay.
   const t = document.documentElement.dataset.tema;
   if (t) return t === 'oscuro';
-  return matchMedia('(prefers-color-scheme: dark)').matches || esDeNoche();
+  return esDeNoche();
 }
 
 /** Repinta el cielo con la condición de la estación elegida. */
@@ -991,13 +993,17 @@ function leyendaTemp(min, medio, max, rango, W, y) {
 function aplicarTema(t) {
   if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t;
   else delete document.documentElement.dataset.tema;
-  $('#tema').textContent = document.documentElement.dataset.tema === 'oscuro' ? '☀' : '☾';
+  const esNoche = document.documentElement.dataset.tema
+    ? document.documentElement.dataset.tema === 'oscuro'
+    : esDeNoche();
+  $('#tema').textContent = esNoche ? '☀' : '☾';
+  $('#tema').title = esNoche ? 'Ver el cielo de día' : 'Ver el cielo de noche';
 }
 
 function alternarTema() {
   const actual = document.documentElement.dataset.tema;
-  const sistemaOscuro = matchMedia('(prefers-color-scheme: dark)').matches;
-  const siguiente = actual ? (actual === 'oscuro' ? 'claro' : 'oscuro') : (sistemaOscuro ? 'claro' : 'oscuro');
+  const eraNoche = actual ? actual === 'oscuro' : esDeNoche();
+  const siguiente = eraNoche ? 'claro' : 'oscuro';
   localStorage.setItem('tema', siguiente);
   aplicarTema(siguiente);
   refrescarCielo();

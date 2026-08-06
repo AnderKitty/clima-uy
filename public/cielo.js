@@ -12,28 +12,38 @@ const $ = (s) => document.querySelector(s);
  */
 const CIELOS = {
   despejado: {
-    dia: { grad: ['#7fb3e8', '#a9cdf0', '#dce9f7'], nubes: .18, sol: .9, solColor: '#fff3c4', solPos: [76, 22], estrellas: 0, amb: '#2a78d6' },
-    noche: { grad: ['#070b16', '#0d1526', '#1b2a44'], nubes: .12, sol: .5, solColor: '#cfe0ff', solPos: [76, 20], estrellas: 1, amb: '#9db8ff' },
+    dia: { grad: ['#152038', '#2a3c68', '#7d5a3c', '#d0904c'], nubes: .28, sol: 1,
+           solColor: '#ffcf7a', solPos: [74, 72], estrellas: 0, amb: '#ffcf8a' },
+    noche: { grad: ['#070b16', '#0d1526', '#16233c'], nubes: .22, sol: .55,
+             solColor: '#cfe0ff', solPos: [76, 20], estrellas: 1, amb: '#aab8dd' },
   },
   nuboso: {
-    dia: { grad: ['#8fb0cf', '#b6cade', '#dbe5ee'], nubes: .55, sol: .5, solColor: '#ffeab8', solPos: [72, 26], estrellas: 0, amb: '#4a7fbf' },
-    noche: { grad: ['#0d1420', '#182233', '#25344a'], nubes: .5, sol: .3, solColor: '#cfe0ff', solPos: [74, 22], estrellas: .5, amb: '#9db8ff' },
+    dia: { grad: ['#18202f', '#26324a', '#3a4a66'], nubes: .7, sol: .45,
+           solColor: '#ffdca0', solPos: [72, 30], estrellas: 0, amb: '#9db8ff' },
+    noche: { grad: ['#0d1420', '#182233', '#25344a'], nubes: .6, sol: .3,
+             solColor: '#cfe0ff', solPos: [74, 22], estrellas: .6, amb: '#9db8ff' },
   },
   cubierto: {
-    dia: { grad: ['#8d98a6', '#adb8c4', '#ccd4dc'], nubes: .85, sol: 0, estrellas: 0, amb: '#5b6472' },
+    dia: { grad: ['#1a2130', '#2b3546', '#414d61'], nubes: .85, sol: 0, estrellas: 0, amb: '#b9c6de' },
     noche: { grad: ['#0c1119', '#171e29', '#232c3a'], nubes: .8, sol: 0, estrellas: 0, amb: '#8794aa' },
   },
   niebla: {
-    dia: { grad: ['#a8b0b8', '#c3cad1', '#dde1e5'], nubes: .95, sol: 0, estrellas: 0, amb: '#6b7480', niebla: 1 },
-    noche: { grad: ['#11151b', '#1c222b', '#28303b'], nubes: .9, sol: 0, estrellas: 0, amb: '#8b95a3', niebla: 1 },
+    dia: { grad: ['#20262f', '#333c48', '#4c5765'], nubes: .95, sol: 0, estrellas: 0,
+           amb: '#c3cad1', niebla: 1 },
+    noche: { grad: ['#11151b', '#1c222b', '#28303b'], nubes: .9, sol: 0, estrellas: 0,
+             amb: '#8b95a3', niebla: 1 },
   },
   lluvia: {
-    dia: { grad: ['#6f7f92', '#8d9db0', '#b3c0cd'], nubes: .8, sol: 0, estrellas: 0, amb: '#2a78d6', lluvia: 1 },
-    noche: { grad: ['#0a1018', '#141d2a', '#1f2c3e'], nubes: .82, sol: 0, estrellas: 0, amb: '#7cb8f5', lluvia: 1 },
+    dia: { grad: ['#121824', '#1f2a3b', '#2d3b50'], nubes: .8, sol: 0, estrellas: 0,
+           amb: '#8fb4ff', lluvia: 1 },
+    noche: { grad: ['#0a1018', '#141d2a', '#1f2c3e'], nubes: .82, sol: 0, estrellas: 0,
+             amb: '#7cb8f5', lluvia: 1 },
   },
   tormenta: {
-    dia: { grad: ['#525d6c', '#6d7a8a', '#94a1b0'], nubes: .95, sol: 0, estrellas: 0, amb: '#3d4757', lluvia: 2, rayos: 1 },
-    noche: { grad: ['#070a10', '#101722', '#1a2433'], nubes: .95, sol: 0, estrellas: 0, amb: '#a9b6d6', lluvia: 2, rayos: 1 },
+    dia: { grad: ['#0b1019', '#161e2e', '#232f45'], nubes: .92, sol: 0, estrellas: 0,
+           amb: '#a9b6d6', lluvia: 2, rayos: 1 },
+    noche: { grad: ['#070a10', '#101722', '#1a2433'], nubes: .95, sol: 0, estrellas: 0,
+             amb: '#a9b6d6', lluvia: 2, rayos: 1 },
   },
 };
 
@@ -73,61 +83,26 @@ function montar() {
 }
 
 /**
- * Nubes en SVG con bordes deshilachados por ruido fractal.
+ * Nubes: manchas grandes con degradado radial y desenfoque.
  *
- * Una elipse con `blur` no parece una nube: no tiene silueta, queda una mancha
- * difusa. Y una silueta con borde limpio parece una calcomanía. Lo que da el
- * aspecto correcto es una silueta de lóbulos superpuestos deformada con
- * feTurbulence + feDisplacementMap: el contorno se vuelve irregular y algodonoso
- * sin perder la forma.
- *
- * El filtro se aplica a formas estáticas y solo se anima el `transform` del
- * grupo, así el navegador cachea el resultado del filtro y no lo recalcula por
- * cuadro.
+ * Es la técnica de la maqueta original, con sus valores. La probé primero con
+ * blanco puro y quedaban "puntos blancos moviéndose"; después con siluetas SVG
+ * y quedaba un borrón. Lo que la hace funcionar no es la forma sino el color:
+ * gris azulado (no blanco) sobre un cielo oscuro. El blanco puro salta como
+ * mancha contra cualquier fondo; este tono se integra como bruma.
  */
-function nubeSilueta(semilla) {
-  // Lóbulos de una nube cúmulo: base ancha y chata, coronas de distinto radio.
-  const lobulos = [
-    [50, 58, 46, 26], [96, 48, 38, 30], [140, 60, 42, 24],
-    [74, 40, 34, 27], [118, 38, 30, 24], [30, 62, 30, 20], [162, 64, 28, 18],
-  ];
-  const r = (n) => ((Math.sin(semilla * 12.9898 + n * 78.233) * 43758.5453) % 1 + 1) % 1;
-
-  const formas = lobulos.map(([cx, cy, rx, ry], i) =>
-    `<ellipse cx="${(cx + (r(i) - .5) * 14).toFixed(1)}" cy="${(cy + (r(i + 9) - .5) * 8).toFixed(1)}" ` +
-    `rx="${(rx * (.85 + r(i + 3) * .4)).toFixed(1)}" ry="${(ry * (.85 + r(i + 5) * .4)).toFixed(1)}"/>`
-  ).join('');
-
-  return `<g filter="url(#deshilachar)">${formas}</g>`;
-}
-
 function nubes() {
-  const capas = [];
+  const capa = [];
   for (let i = 0; i < 9; i++) {
-    const escala = .55 + Math.random() * 1.5;
-    const y = -4 + Math.random() * 62;
-    const dur = 170 + Math.random() * 260;
-    const retraso = -Math.random() * dur;
-    const op = .28 + Math.random() * .42;
-
-    capas.push(
-      `<span class="nube" style="top:${y.toFixed(1)}%;opacity:${op.toFixed(2)};` +
-      `animation-duration:${dur.toFixed(0)}s;animation-delay:${retraso.toFixed(0)}s">` +
-      `<svg viewBox="0 0 200 100" width="${(200 * escala).toFixed(0)}" height="${(100 * escala).toFixed(0)}" ` +
-      `fill="#fff" aria-hidden="true">${nubeSilueta(i + 1)}</svg></span>`
+    const w = 180 + Math.random() * 260;
+    const dur = 50 + Math.random() * 70;
+    capa.push(
+      `<span class="nube" style="width:${w.toFixed(0)}px;height:${(w * .55).toFixed(0)}px;` +
+      `top:${(Math.random() * 55).toFixed(1)}%;opacity:${(.5 + Math.random() * .5).toFixed(2)};` +
+      `animation-duration:${dur.toFixed(0)}s;animation-delay:${(-Math.random() * dur).toFixed(0)}s"></span>`
     );
   }
-
-  // Un solo <defs> para todas: el filtro es caro de declarar por nube.
-  return `<svg width="0" height="0" class="cielo-defs"><defs>
-      <filter id="deshilachar" x="-25%" y="-40%" width="150%" height="180%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.015 0.035"
-                      numOctaves="4" seed="7" result="ruido"/>
-        <feDisplacementMap in="SourceGraphic" in2="ruido" scale="26"
-                           xChannelSelector="R" yChannelSelector="G" result="roto"/>
-        <feGaussianBlur in="roto" stdDeviation="5"/>
-      </filter>
-    </defs></svg>` + capas.join('');
+  return capa.join('');
 }
 
 function estrellas(n) {
@@ -156,7 +131,10 @@ export function aplicarCielo(nombre, esNoche) {
   if (estadoActual === `${nombre}|${esNoche}`) return;
   estadoActual = `${nombre}|${esNoche}`;
 
-  c.grad.style.background = `linear-gradient(180deg, ${s.grad[0]} 0%, ${s.grad[1]} 52%, ${s.grad[2]} 100%)`;
+  const paradas = s.grad
+    .map((c, i) => `${c} ${((i / (s.grad.length - 1)) * 100).toFixed(0)}%`)
+    .join(', ');
+  c.grad.style.background = `linear-gradient(180deg, ${paradas})`;
   c.nubes.style.opacity = s.nubes;
   c.estrellas.style.opacity = s.estrellas ?? 0;
   c.raiz.classList.toggle('cielo-con-niebla', !!s.niebla);
