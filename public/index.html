@@ -89,6 +89,8 @@
       <p class="panel-nota">De dónde sale cada número</p>
     </div>
 
+    <div class="colofon-cuerpo">
+    <div class="colofon-prosa">
     <p class="colofon-texto">
       INUMET, el servicio meteorológico nacional, <strong>no publica una API</strong>.
       Pero su propio sitio se alimenta de unos pocos archivos JSON que quedan
@@ -106,6 +108,14 @@
       desactualizado si su servidor cambia o deja de responder.
     </p>
 
+    <p class="colofon-nota">
+      Se consulta al origen una sola vez cada 5 minutos y el resultado se comparte
+      entre todos los visitantes: el sitio genera como mucho ~12 pedidos por hora a
+      INUMET sin importar cuánta gente lo use.
+    </p>
+    </div>
+
+    <div class="colofon-ficha">
     <h3 class="ficha-titulo">Ficha técnica</h3>
     <dl class="ficha">
       <div><dt>Fuente</dt><dd>INUMET (inumet.gub.uy), 4 endpoints internos no documentados</dd></div>
@@ -119,12 +129,8 @@
       <div><dt>Mapa</dt><dd>geoBoundaries ADM1 (CC BY 4.0, vía OpenStreetMap), simplificado a 41 KB</dd></div>
       <div><dt>Cálculos propios</dt><dd>Sensación térmica (wind chill JAG/TI y heat index) y zona por cercanía</dd></div>
     </dl>
-
-    <p class="colofon-nota">
-      Se consulta al origen una sola vez cada 5 minutos y el resultado se comparte
-      entre todos los visitantes: el sitio genera como mucho ~12 pedidos por hora a
-      INUMET sin importar cuánta gente lo use.
-    </p>
+    </div>
+    </div>
   </section>
 </template>
 

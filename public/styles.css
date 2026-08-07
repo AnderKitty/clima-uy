@@ -243,6 +243,13 @@ main {
   color: var(--tinta-3); font-size: .82rem;
 }
 
+/* Sin datos no hace falta reservar la altura del gráfico. */
+.lienzo-vacio { height: auto; }
+.lienzo-vacio .sin-datos {
+  height: auto; padding: 14px 0; justify-items: start;
+  font-style: italic;
+}
+
 /* ---------- tabla alterna ---------- */
 
 .tabla-alterna { margin-top: 14px; border-top: 1px solid var(--borde); padding-top: 12px; }
@@ -338,6 +345,20 @@ th:first-child, td:first-child { text-align: left; }
 .colofon-nota {
   margin: 18px 0 0; max-width: 68ch;
   font-size: .8rem; color: var(--tinta-3); line-height: 1.55;
+}
+
+/* En ancho, prosa y ficha van lado a lado. Antes la prosa iba sola a 68ch y la
+   ficha debajo a tres columnas, así que la mitad derecha del panel quedaba
+   vacía y la última fila de la ficha terminaba coja. */
+.colofon-cuerpo { display: grid; gap: 4px 44px; }
+
+@media (min-width: 1000px) {
+  .colofon-cuerpo {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+  .colofon-ficha .ficha-titulo { margin-top: 0; }
+  .colofon-ficha .ficha { grid-template-columns: 1fr; }
 }
 
 /* ---------- pie ---------- */
@@ -512,7 +533,9 @@ body { background: transparent; }
   main {
     display: grid;
     grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-    align-items: start;
+    /* stretch (el valor por defecto) y no start: con start, series y mapa
+       terminaban a alturas distintas y los dos bordes inferiores quedaban
+       desparejos, que es de lo primero que se nota en una grilla de tarjetas. */
     gap: 20px;
   }
   /* A todo lo ancho: lo que necesita aire horizontal. */
@@ -523,6 +546,18 @@ body { background: transparent; }
      scrollear se traba a mitad de camino en vez de acompañar. Un sticky solo
      sirve si el elemento entra entero en el viewport. */
   .panel-mapa { grid-column: 2; }
+
+  /* Al emparejar alturas, al panel de series le sobraba espacio abajo. En vez
+     de dejarlo como hueco, se lo lleva el gráfico de temperatura: gana
+     resolución vertical, que es dato, no relleno. graficoLinea ya dibuja con
+     cont.clientHeight, así que basta con dejar crecer al contenedor. */
+  .panel-series { display: flex; flex-direction: column; }
+  .panel-series .grafico:first-of-type {
+    flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0;
+  }
+  .panel-series .grafico:first-of-type .lienzo {
+    flex: 1 1 auto; height: auto; min-height: 190px;
+  }
 }
 
 /* Numeración de secciones, para que la lectura tenga orden. */

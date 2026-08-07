@@ -388,7 +388,13 @@ function redibujarGraficos() {
     : '';
 }
 
+/**
+ * Estado vacío de un gráfico. Colapsa la altura reservada: muchas estaciones no
+ * miden precipitación, y dejar el hueco de 110 px con una línea de texto en el
+ * medio hacía un agujero enorme en el panel.
+ */
 function vacio(cont, texto) {
+  cont.classList.add('lienzo-vacio');
   cont.replaceChildren(Object.assign(document.createElement('p'), {
     className: 'sin-datos', textContent: texto,
   }));
@@ -407,19 +413,29 @@ const el = (tag, attrs = {}) => {
   return n;
 };
 
-/** Marcas del eje X: una cada 12 h, sobre las horas redondas. */
-function marcasTiempo(datos) {
-  const out = [];
+/**
+ * Marcas del eje X, sobre horas redondas. El paso base es cada 12 h, pero se
+ * ralea según el ancho disponible: en un teléfono las seis etiquetas de
+ * "mié 12:00" no entran y se pisaban unas con otras hasta quedar ilegibles.
+ */
+function marcasTiempo(datos, iw) {
+  const candidatos = [];
   let ultima = -Infinity;
   datos.forEach((d, i) => {
     const h = Number(nHora.format(d.x).slice(0, 2));
-    if (h % 12 === 0 && i - ultima >= 6) { out.push(i); ultima = i; }
+    if (h % 12 === 0 && i - ultima >= 6) { candidatos.push(i); ultima = i; }
   });
-  return out;
+
+  const caben = Math.max(2, Math.floor(iw / 64));   // ~64 px por etiqueta
+  if (candidatos.length <= caben) return candidatos;
+
+  const salto = Math.ceil(candidatos.length / caben);
+  return candidatos.filter((_, k) => k % salto === 0);
 }
 
 function graficoLinea(cont, datos, { unidad, decimales }) {
   if (!datos.length) return vacio(cont, estado.serie ? 'Esta estación no reporta temperatura.' : 'Cargando…');
+  cont.classList.remove('lienzo-vacio');
 
   const w = Math.max(cont.clientWidth || 640, 320);
   const h = cont.clientHeight || 190;
@@ -459,7 +475,7 @@ function graficoLinea(cont, datos, { unidad, decimales }) {
 
   // Eje X con horas
   svg.append(el('line', { class: 'eje', x1: m.l, x2: m.l + iw, y1: m.t + ih, y2: m.t + ih }));
-  for (const i of marcasTiempo(datos)) {
+  for (const i of marcasTiempo(datos, iw)) {
     const t = el('text', { class: 'marca-txt', x: X(i), y: h - 6, 'text-anchor': 'middle' });
     t.textContent = `${nDia.format(datos[i].x).replace('.', '')} ${nHora.format(datos[i].x)}`;
     svg.append(t);
@@ -530,6 +546,7 @@ function graficoBarras(cont, datos, { unidad }) {
   if (!datos.length) {
     return vacio(cont, estado.serie ? 'Esta estación no mide precipitación.' : 'Cargando…');
   }
+  cont.classList.remove('lienzo-vacio');
 
   const w = Math.max(cont.clientWidth || 640, 320);
   const h = cont.clientHeight || 110;
@@ -554,7 +571,7 @@ function graficoBarras(cont, datos, { unidad }) {
   }
 
   // Mismo rótulo que el gráfico de temperatura: van apilados y se leen juntos.
-  for (const i of marcasTiempo(datos)) {
+  for (const i of marcasTiempo(datos, iw)) {
     const t = el('text', { class: 'marca-txt', x: X(i) + ancho / 2, y: h - 5, 'text-anchor': 'middle' });
     t.textContent = `${nDia.format(datos[i].x).replace('.', '')} ${nHora.format(datos[i].x)}`;
     svg.append(t);
