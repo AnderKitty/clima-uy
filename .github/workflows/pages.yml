@@ -1,4 +1,10 @@
-# Publica public/ en GitHub Pages empujando a la rama gh-pages.
+# Publica el sitio en GitHub Pages empujando a la rama gh-pages.
+#
+# Pages no corre código, y el navegador no puede consultar a INUMET por su
+# cuenta porque no manda cabeceras CORS. La salida es hacer el scraping *acá*,
+# en CI: `tools/generar.mjs` consulta INUMET y deja los JSON ya normalizados
+# junto a la web, así que el sitio se sirve entero desde Pages y no depende de
+# ningún servidor propio.
 #
 # Antes usaba actions/deploy-pages, que después de subir el artefacto se queda
 # esperando a que GitHub confirme el deployment. Con un dominio custom sin
@@ -8,9 +14,14 @@
 name: Deploy Pages
 
 on:
+  # Los datos se refrescan solos. INUMET declara max-age de 60–300 s, pero cada
+  # media hora alcanza de sobra para un visor y mantiene el gasto de Actions
+  # bajo. OJO: GitHub apaga los cron en repos sin actividad por 60 días.
+  schedule:
+    - cron: '*/30 * * * *'
   push:
     branches: [main]
-    paths: ['public/**', '.github/workflows/pages.yml']
+    paths: ['public/**', 'lib/**', 'tools/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 
 permissions:
@@ -26,13 +37,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Publicar public/ en gh-pages
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Sin dependencias: no hay npm install que hacer.
+      - name: Generar los JSON desde INUMET
+        run: node tools/generar.mjs dist
+
+      - name: Publicar dist/ en gh-pages
         run: |
           set -euo pipefail
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          rm -rf /tmp/sitio && cp -r public /tmp/sitio
+          # A /tmp antes de cambiar de rama: el checkout huérfano borra todo lo
+          # que haya en el árbol, dist/ incluido.
+          rm -rf /tmp/sitio && cp -r dist /tmp/sitio
 
           # Rama huérfana: gh-pages contiene solo el sitio, sin el historial
           # del backend.

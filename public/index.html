@@ -5,9 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Clima UY — el tiempo en Uruguay</title>
 <meta name="description" content="El estado del tiempo en Uruguay, claro y al grano. Datos de INUMET.">
-<!-- Dónde vive la API. En localhost se ignora y va contra el mismo origen,
-     así que para desarrollar no hay que tocar nada. -->
-<meta name="clima-api" content="https://api-clima.anderkitty.pink">
+<!-- Dónde vive la API. Vacío = mismo origen, que es lo normal: el build de CI
+     deja los JSON al lado de la web, así que Pages se sirve solo y no hay
+     backend del que depender. Poner una URL acá vuelve a apuntar a un servidor
+     propio (útil si algún día el scraping tiene que correr fuera de CI). -->
+<meta name="clima-api" content="">
 <link rel="stylesheet" href="styles.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌤️</text></svg>">
 </head>
