@@ -13,18 +13,18 @@ const $ = (s) => document.querySelector(s);
 const CIELOS = {
   despejado: {
     dia: { grad: ['#152038', '#2a3c68', '#7d5a3c', '#d0904c'], nubes: .28, sol: 1,
-           solColor: '#ffcf7a', solPos: [74, 72], estrellas: 0, amb: '#ffcf8a',
+           solColor: '#ffcf7a', solPos: [85, 12], estrellas: 0, amb: '#ffcf8a',
            nube: ['rgba(244,228,208,.82)', 'rgba(186,166,166,.30)'] },
     noche: { grad: ['#070b16', '#0d1526', '#16233c'], nubes: .22, sol: .55,
-             solColor: '#cfe0ff', solPos: [76, 20], estrellas: 1, amb: '#aab8dd',
+             solColor: '#cfe0ff', solPos: [85, 12], estrellas: 1, amb: '#aab8dd',
              nube: ['rgba(150,166,205,.52)', 'rgba(90,104,140,.22)'] },
   },
   nuboso: {
     dia: { grad: ['#18202f', '#26324a', '#3a4a66'], nubes: .7, sol: .45,
-           solColor: '#ffdca0', solPos: [72, 30], estrellas: 0, amb: '#9db8ff',
+           solColor: '#ffdca0', solPos: [82, 14], estrellas: 0, amb: '#9db8ff',
            nube: ['rgba(214,224,250,.85)', 'rgba(150,168,205,.32)'] },
     noche: { grad: ['#0d1420', '#182233', '#25344a'], nubes: .6, sol: .3,
-             solColor: '#cfe0ff', solPos: [74, 22], estrellas: .6, amb: '#9db8ff',
+             solColor: '#cfe0ff', solPos: [82, 14], estrellas: .6, amb: '#9db8ff',
              nube: ['rgba(142,160,202,.62)', 'rgba(84,100,138,.26)'] },
   },
   cubierto: {
@@ -215,12 +215,35 @@ export function aplicarCielo(nombre, esNoche) {
 
   if (s.sol) {
     const [x, y] = s.solPos ?? [74, 24];
-    const tam = esNoche ? 110 : 190;
+    const col = s.solColor;
+
+    // La caja es mucho más grande que el disco visible: el halo necesita lugar
+    // para desvanecerse. Antes el degradado iba a color pleno hasta el 32 % y
+    // recién ahí caía, así que se veía un disco de borde mojado, y el
+    // box-shadow le agregaba un anillo con corte propio.
+    //
+    // Un astro real es un núcleo chico y muy brillante con una cola de luz
+    // larguísima y tenue. Eso son muchas paradas juntas cerca del centro y
+    // pocas, muy separadas, hacia afuera.
+    const tam = esNoche ? 300 : 620;
+    const nucleo = esNoche ? 9 : 4.6;   // radio del disco, en % de la caja
+    const p = (k) => (nucleo * k).toFixed(1);
+
+    const capas = esNoche
+      // Luna: disco definido, halo corto. Si se le da la misma cola que al sol
+      // parece una lámpara.
+      ? `#ffffff 0%, ${col} ${p(0.9)}%, ${col}cc ${p(1)}%, ` +
+        `${col}40 ${p(1.9)}%, ${col}12 ${p(3.4)}%, transparent 62%`
+      // Sol: núcleo blanco, y de ahí una caída larga hasta casi nada.
+      : `#ffffff ${p(0.35)}%, ${col} ${p(1)}%, ${col}b8 ${p(1.7)}%, ` +
+        `${col}5c ${p(3.1)}%, ${col}24 ${p(5.4)}%, ${col}0d ${p(8.6)}%, transparent 72%`;
+
     Object.assign(c.astro.style, {
       opacity: s.sol, left: `${x}%`, top: `${y}%`,
-      width: `${tam}px`, height: `${tam}px`, marginLeft: `${-tam / 2}px`, marginTop: `${-tam / 2}px`,
-      background: `radial-gradient(circle, ${s.solColor} 0%, ${s.solColor} 32%, transparent 72%)`,
-      boxShadow: `0 0 140px 50px ${s.solColor}44`,
+      width: `${tam}px`, height: `${tam}px`,
+      marginLeft: `${-tam / 2}px`, marginTop: `${-tam / 2}px`,
+      background: `radial-gradient(circle, ${capas})`,
+      boxShadow: 'none',
     });
   } else {
     c.astro.style.opacity = 0;

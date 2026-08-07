@@ -424,10 +424,20 @@ th:first-child, td:first-child { text-align: left; }
 
 .cielo-grad { transition: background 1.2s ease; }
 
+/* `screen` es lo que lo convierte en luz: el astro se suma al cielo en vez de
+   taparlo. Pintado normal, sobre un fondo oscuro, un degradado cálido se lee
+   como una mancha gris apoyada encima. El latido es apenas perceptible y
+   evita que quede como una calcomanía. */
 .cielo-astro {
-  inset: auto; border-radius: 50%;
+  inset: auto;
+  mix-blend-mode: screen;
   transition: opacity 1.2s ease, background 1.2s ease;
-  will-change: opacity;
+  animation: latir 11s ease-in-out infinite alternate;
+  will-change: opacity, transform;
+}
+@keyframes latir {
+  from { transform: scale(1) }
+  to   { transform: scale(1.05) }
 }
 
 .cielo-estrellas, .cielo-nubes { transition: opacity 1.2s ease; }
@@ -489,7 +499,8 @@ body { background: transparent; }
 .hero { background-image: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  .cielo-nubes .nube, .cielo-nubes .nube-cuerpo, .cielo-estrellas span { animation: none; }
+  .cielo-nubes .nube, .cielo-nubes .nube-cuerpo,
+  .cielo-estrellas span, .cielo-astro { animation: none; }
   .cielo-lluvia { display: none; }
 }
 
