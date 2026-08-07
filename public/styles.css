@@ -343,9 +343,22 @@ th:first-child, td:first-child { text-align: left; }
 /* ---------- pie ---------- */
 
 .pie {
-  max-width: var(--ancho); margin: 0 auto; padding: 0 20px 40px;
+  position: relative;
+  max-width: var(--ancho); margin: 0 auto; padding: 28px 20px 40px;
   color: var(--tinta-3); font-size: .8rem;
 }
+
+/* El cielo va fijo al viewport, así que al llegar al fondo el pie queda sobre
+   la parte baja del degradado —con sol, un naranja de amanecer— y el texto
+   gris se vuelve ilegible. Un velo a todo el ancho lo despega del fondo sin
+   cortar la animación: va en z-index negativo, por debajo del propio texto
+   pero por encima de `.cielo`, que está antes en el DOM. */
+.pie::before {
+  content: ''; position: absolute; z-index: -1; pointer-events: none;
+  left: 50%; transform: translateX(-50%); width: 100vw; top: 0; bottom: 0;
+  background: linear-gradient(180deg, transparent, rgba(8, 12, 20, .85) 55%);
+}
+
 .pie p { margin: 0 0 4px; }
 .pie-sello { font-variant-numeric: tabular-nums; }
 
