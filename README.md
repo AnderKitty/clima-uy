@@ -1,4 +1,4 @@
-# Pampero
+# Clima UY
 
 Visor del tiempo para Uruguay construido sobre los datos de INUMET.
 

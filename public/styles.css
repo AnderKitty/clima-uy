@@ -1,4 +1,4 @@
-/* Pampero — hoja única. Roles por variable para que el tema cambie en un lugar. */
+/* Clima UY — hoja única. Roles por variable para que el tema cambie en un lugar. */
 
 /* Dos temas: el botón de la barra cambia ÚNICAMENTE el color del sitio.
 
@@ -98,18 +98,9 @@ a { color: inherit; text-decoration-color: var(--tinta-3); text-underline-offset
   max-width: var(--ancho); margin: 0 auto; padding: 20px 20px 8px;
 }
 
-.marca { display: flex; align-items: center; gap: 10px; }
-
-.marca-punto {
-  width: 12px; height: 12px; border-radius: 50%;
-  background: var(--serie-1);
-  box-shadow: 0 0 0 4px color-mix(in oklab, var(--serie-1) 18%, transparent);
-}
-
-.marca h1 { font-size: 1.15rem; font-weight: 650; margin: 0; letter-spacing: -.02em; }
-.marca h1 span { color: var(--tinta-3); font-weight: 500; }
-
-.barra-acciones { display: flex; align-items: center; gap: 8px; }
+/* El h1 va oculto, así que los controles son lo único en flujo: sin este
+   margen `space-between` los pegaría a la izquierda. */
+.barra-acciones { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 
 .selector select {
   appearance: none;
@@ -636,7 +627,6 @@ body { background: transparent; }
 main { counter-reset: seccion; }
 
 /* El acento del sitio sigue al cielo. */
-.marca-punto { background: var(--amb, var(--serie-1)); }
 
 /* ==========================================================================
    Panel de pruebas
@@ -739,7 +729,6 @@ main { counter-reset: seccion; }
   .barra-acciones { width: 100%; }
   .selector { flex: 1; min-width: 0; }
   .selector select { max-width: 100%; width: 100%; }
-  .marca h1 { font-size: 1.05rem; }
 
   /* La tabla de datos no debe empujar el ancho de la página. */
   .tabla-envoltorio { margin-inline: -16px; padding-inline: 16px; }

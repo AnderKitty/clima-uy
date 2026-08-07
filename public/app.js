@@ -1,4 +1,4 @@
-// Pampero — toda la UI. Sin dependencias: fetch + SVG a mano.
+// Clima UY — toda la UI. Sin dependencias: fetch + SVG a mano.
 
 import { aplicarCielo } from './cielo.js';
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pampero — el tiempo en Uruguay</title>
+<title>El tiempo en Uruguay</title>
 <meta name="description" content="El estado del tiempo en Uruguay, claro y al grano. Datos de INUMET.">
 <!-- Dónde vive la API. Vacío = mismo origen, que es lo normal: el build de CI
      deja los JSON al lado de la web, así que Pages se sirve solo y no hay
@@ -16,10 +16,10 @@
 <body>
 
 <header class="barra">
-  <div class="marca">
-    <span class="marca-punto" aria-hidden="true"></span>
-    <h1>Pampero</h1>
-  </div>
+  <!-- Sin marca visible: la barra deja solo los controles. El h1 se mantiene
+       oculto porque la página necesita un encabezado para lectores de pantalla
+       y para los buscadores, pero no se dibuja nada arriba a la izquierda. -->
+  <h1 class="sr">El tiempo en Uruguay</h1>
   <div class="barra-acciones">
     <label class="selector">
       <span class="sr">Estación</span>

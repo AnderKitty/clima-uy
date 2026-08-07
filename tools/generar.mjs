@@ -34,6 +34,50 @@ console.log(`generando en ${DIST}`);
 await fs.rm(DIST, { recursive: true, force: true });
 await fs.cp(path.join(RAIZ, 'public'), DIST, { recursive: true });
 
+await sellarEstaticos();
+
+/**
+ * Cache-busting por contenido.
+ *
+ * GitHub Pages sirve todo con `max-age=600` y no deja tocar cabeceras, así que
+ * después de publicar el navegador puede seguir mostrando la versión anterior
+ * hasta diez minutos —y una pestaña ya abierta, indefinidamente—. Pasó: tras un
+ * deploy solo se veía el archivo nuevo, porque era el único que no estaba en la
+ * caché.
+ *
+ * La solución es que la URL cambie cuando cambia el archivo. Se le cuelga un
+ * hash del contenido a cada referencia; si el archivo no cambió, la URL tampoco
+ * y la caché sigue sirviendo. Hay que reescribir también los `import` dentro de
+ * app.js: se resuelven contra su propia URL, y sin sello quedarían apuntando al
+ * cielo.js viejo aunque app.js sí se hubiera renovado.
+ */
+async function sellarEstaticos() {
+  const { createHash } = await import('node:crypto');
+  const sello = (txt) => createHash('sha1').update(txt).digest('hex').slice(0, 8);
+  const leer = (f) => fs.readFile(path.join(DIST, f), 'utf8');
+  const guardar = (f, txt) => fs.writeFile(path.join(DIST, f), txt);
+
+  // Primero las hojas del árbol de imports, para que su hash ya esté fijo
+  // cuando se calcule el de app.js.
+  const vCielo = sello(await leer('cielo.js'));
+  const vPruebas = sello(await leer('pruebas.js'));
+
+  let app = await leer('app.js');
+  app = app.replace("'./cielo.js'", `'./cielo.js?v=${vCielo}'`)
+           .replace("'./pruebas.js'", `'./pruebas.js?v=${vPruebas}'`);
+  await guardar('app.js', app);
+
+  const vApp = sello(app);
+  const vCss = sello(await leer('styles.css'));
+
+  let html = await leer('index.html');
+  html = html.replace('href="styles.css"', `href="styles.css?v=${vCss}"`)
+             .replace('src="app.js"', `src="app.js?v=${vApp}"`);
+  await guardar('index.html', html);
+
+  console.log(`sellos: css=${vCss} app=${vApp} cielo=${vCielo} pruebas=${vPruebas}`);
+}
+
 const [datosAhora, datosPron, datosAvisos, todas] = await Promise.all([
   ahora(),
   pronostico().catch((e) => { console.warn('pronóstico falló:', e.message); return null; }),
