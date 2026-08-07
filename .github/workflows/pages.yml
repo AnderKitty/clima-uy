@@ -48,8 +48,10 @@ jobs:
       - name: Publicar dist/ en gh-pages
         run: |
           set -euo pipefail
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Los commits de gh-pages van a tu nombre, no al del bot: si no,
+          # github-actions[bot] aparece en el historial del repo.
+          git config user.name  "AnderKitty"
+          git config user.email "AnderKitty@users.noreply.github.com"
 
           # A /tmp antes de cambiar de rama: el checkout huérfano borra todo lo
           # que haya en el árbol, dist/ incluido.
