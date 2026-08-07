@@ -10,10 +10,13 @@ const $ = (s) => document.querySelector(s);
  * Paletas por condición y momento del día. `amb` es el color de acento que
  * toma el resto de la interfaz, así que el sitio entero se tiñe con el clima.
  *
- * `dia` va con el tema claro y `noche` con el oscuro — el cielo y la interfaz
- * no pueden discrepar. Por eso cada variante lleva su propio `amb` y su propio
- * tinte de nube: sobre fondo claro el acento tiene que ser oscuro para leerse,
- * y las nubes tienen que ser blancas; sobre fondo oscuro, al revés.
+ * Cuál se usa lo decide la HORA REAL de Uruguay, no el tema: si son las 10 de
+ * la mañana el cielo es de día, tengas la interfaz clara u oscura. El tema es
+ * el color del sitio y nada más.
+ *
+ * El acento (`amb`) es la excepción: ese sí lo manda el tema, porque un naranja
+ * oscuro pensado para fondo claro es ilegible sobre la interfaz oscura y al
+ * revés. Por eso cada variante lleva el suyo y se elige cruzado.
  */
 const CIELOS = {
   despejado: {
@@ -191,13 +194,13 @@ function estrellas(n) {
  * (despejado / nuboso / cubierto / lluvia / tormenta / niebla) y `noche`
  * decide la variante.
  */
-export function aplicarCielo(nombre, esNoche) {
+export function aplicarCielo(nombre, esNoche, uiOscura = true) {
   const c = montar();
   const set = CIELOS[nombre] ?? CIELOS.nuboso;
   const s = esNoche ? set.noche : set.dia;
 
-  if (estadoActual === `${nombre}|${esNoche}`) return;
-  estadoActual = `${nombre}|${esNoche}`;
+  if (estadoActual === `${nombre}|${esNoche}|${uiOscura}`) return;
+  estadoActual = `${nombre}|${esNoche}|${uiOscura}`;
 
   const paradas = s.grad
     .map((c, i) => `${c} ${((i / (s.grad.length - 1)) * 100).toFixed(0)}%`)
@@ -214,9 +217,12 @@ export function aplicarCielo(nombre, esNoche) {
   c.estrellas.style.opacity = s.estrellas ?? 0;
   c.raiz.classList.toggle('cielo-con-niebla', !!s.niebla);
 
-  // El acento del sitio lo define el cielo: con tormenta todo se apaga, con
-  // sol se entibia.
-  document.documentElement.style.setProperty('--amb', s.amb);
+  // El acento lo define la condición —con tormenta todo se apaga, con sol se
+  // entibia— pero el tono lo elige el TEMA, no la hora: el acento va sobre la
+  // interfaz, así que tiene que contrastar contra el panel y no contra el
+  // cielo. De ahí que se lea cruzado.
+  const acento = (uiOscura ? set.noche : set.dia).amb;
+  if (acento) document.documentElement.style.setProperty('--amb', acento);
 
   if (s.sol) {
     const [x, y] = s.solPos ?? [74, 24];
@@ -254,14 +260,14 @@ export function aplicarCielo(nombre, esNoche) {
     c.astro.style.opacity = 0;
   }
 
-  arrancarAnimacion(s.lluvia ?? 0, !!s.rayos);
+  arrancarAnimacion(s.lluvia ?? 0, !!s.rayos, esNoche || uiOscura);
 }
 
 /**
  * Lluvia y rayos en canvas. Solo corre si hace falta: sin precipitación no hay
  * bucle, y se frena cuando la pestaña queda en segundo plano.
  */
-function arrancarAnimacion(lluvia, rayos) {
+function arrancarAnimacion(lluvia, rayos, fondoOscuro) {
   const c = capas;
   cancelAnimationFrame(animacion);
   animacion = null;
@@ -277,11 +283,12 @@ function arrancarAnimacion(lluvia, rayos) {
   let gotas = [];
   let destello = 0;
 
-  // Las gotas se dibujan claras sobre cielo oscuro y oscuras sobre cielo
-  // diurno: con un solo color, en tema claro la lluvia desaparecía.
-  const claro = document.documentElement.dataset.tema === 'claro';
-  const tintaGota = claro ? '46,72,104' : '174,198,255';
-  const fuerzaGota = claro ? 1.5 : 1;
+  // Las gotas se dibujan claras sobre fondo oscuro y oscuras sobre cielo
+  // diurno sin velo: con un solo color, la lluvia desaparecía en uno de los
+  // dos casos. Cuenta el fondo real —de noche, o con el velo del tema
+  // oscuro—, no el tema por sí solo.
+  const tintaGota = fondoOscuro ? '174,198,255' : '46,72,104';
+  const fuerzaGota = fondoOscuro ? 1 : 1.5;
 
   const medir = () => {
     c.canvas.width = innerWidth;

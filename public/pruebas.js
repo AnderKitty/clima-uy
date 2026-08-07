@@ -143,7 +143,9 @@ export function montarPruebas(api) {
   for (const [clave, etiqueta] of CONDICIONES) {
     const b = boton(etiqueta, () => {
       estado.cieloForzado = true;
-      aplicarCielo(clave, noche);
+      // El tercer argumento es el tema, que solo regula el brillo del velo:
+      // acá se pasa el vigente para previsualizar en las condiciones reales.
+      aplicarCielo(clave, noche, document.documentElement.dataset.tema !== 'claro');
       marcarActivo('cielo', b);
     });
     b.dataset.grupo = 'cielo';

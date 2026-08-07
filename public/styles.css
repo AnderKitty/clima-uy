@@ -1,13 +1,15 @@
 /* Pampero — hoja única. Roles por variable para que el tema cambie en un lugar. */
 
-/* Dos temas de verdad, y el cielo va atado al tema: en claro el sitio es
-   blanco y el cielo es de día; en oscuro, negro y de noche. Un botón de la
-   barra que dijera "luna" y solo cambiara la animación era engañoso — ese
-   ícono significa modo oscuro en cualquier sitio del mundo. El día/noche del
-   cielo suelto vive ahora en el panel de pruebas, que es donde corresponde.
+/* Dos temas: el botón de la barra cambia ÚNICAMENTE el color del sitio.
 
-   El oscuro es el de por defecto: es el que la maqueta pedía y con el que se
-   diseñaron los paneles de vidrio. */
+   El cielo no lo toca. El cielo muestra la hora real de Uruguay y la condición
+   medida — si son las 10 de la mañana es de día, tengas la web negra o blanca.
+   Atarlos fue un error: pasabas a oscuro a mediodía y el cielo se ponía
+   nocturno, mintiendo sobre el tiempo, que es justo lo que el sitio informa.
+   Lo único que hace el tema oscuro con el cielo es bajarle el brillo con un
+   velo (--velo-cielo), para que un azul de mediodía no compita con los paneles.
+
+   Oscuro es el valor por defecto. */
 :root {
   color-scheme: dark;
 
@@ -36,6 +38,7 @@
   --cielo-a: #16314f;
   --cielo-b: #101d2c;
   --velo-pie: rgba(8, 12, 20, .85);
+  --velo-cielo: rgba(6, 10, 18, .58);
 }
 
 /* Tema claro. No es el oscuro invertido: sobre un cielo diurno los paneles
@@ -64,6 +67,7 @@
   --cielo-a: #cfe2f5;
   --cielo-b: #a9c9e8;
   --velo-pie: rgba(232, 239, 249, .92);
+  --velo-cielo: transparent;
 }
 
 
@@ -476,6 +480,18 @@ th:first-child, td:first-child { text-align: left; }
 
 .cielo { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
 .cielo > * { position: absolute; inset: 0; }
+
+/* Velo del tema.
+   El cielo muestra la hora y el clima REALES: a las 10 de la mañana es de día
+   aunque tengas la web en negro. Pero un azul de mediodía a plena intensidad
+   detrás de paneles oscuros deslumbra, así que el tema oscuro lo baja con este
+   velo — cambia el brillo, no lo que el cielo está diciendo.
+   Va en ::before con z-index porque ::after ya lo ocupa la niebla. */
+.cielo::before {
+  content: ''; position: absolute; inset: 0; z-index: 5; pointer-events: none;
+  background: var(--velo-cielo, transparent);
+  transition: background 1.2s ease;
+}
 
 .cielo-grad { transition: background 1.2s ease; }
 

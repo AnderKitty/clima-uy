@@ -311,18 +311,22 @@ function iconoObservado(e) {
   if (e.visibilidad !== null && e.visibilidad < 1) return 'niebla';
   if (e.humedad !== null && e.humedad >= 97) return 'cubierto';
   if (e.humedad !== null && e.humedad >= 85) return 'nuboso';
-  return uiEnOscuro() ? 'noche' : 'despejado';
+  return esDeNoche() ? 'noche' : 'despejado';
 }
 
 /**
- * ¿La interfaz está renderizando en oscuro?
+ * ¿Es de noche en Uruguay ahora?
  *
- * El cielo tiene que usar SIEMPRE esta respuesta y no la hora: si fuera por el
- * reloj, a las 11 de la mañana con tema oscuro quedaría un cielo diurno claro
- * detrás de paneles oscuros. Atado al tema, nunca pueden discrepar.
- *
- * Oscuro es el valor por defecto: sin preferencia guardada, no hay atributo.
+ * Esto —y no el tema— es lo que decide si el cielo va en su variante diurna o
+ * nocturna, y si el hero muestra sol o luna. El cielo informa el tiempo: a las
+ * 10 de la mañana es de día aunque la interfaz esté en negro.
  */
+function esDeNoche() {
+  const h = Number(nHora.format(new Date()).slice(0, 2));
+  return h < 7 || h >= 19;
+}
+
+/** ¿La interfaz está en oscuro? Solo afecta colores, nunca qué muestra el cielo. */
 function uiEnOscuro() {
   return document.documentElement.dataset.tema !== 'claro';
 }
@@ -332,7 +336,9 @@ function refrescarCielo() {
   // El panel de pruebas fija una condición a mano; sin esto, cambiar de
   // estación la pisaría con el clima real y no se podría mirar nada.
   if (estado.cieloForzado) return;
-  if (estado.seleccionada) aplicarCielo(iconoObservado(estado.seleccionada), uiEnOscuro());
+  if (estado.seleccionada) {
+    aplicarCielo(iconoObservado(estado.seleccionada), esDeNoche(), uiEnOscuro());
+  }
 }
 
 function pintarHero(e) {
@@ -1032,8 +1038,11 @@ function leyendaTemp(min, medio, max, rango, W, y) {
 // ---------------------------------------------------------------------------
 
 /**
- * Tema claro u oscuro. Arrastra al cielo: claro va con la variante de día y
- * oscuro con la de noche, para que el fondo y los paneles no discrepen.
+ * Tema claro u oscuro: cambia ÚNICAMENTE el color del sitio.
+ *
+ * No toca lo que el cielo está mostrando. Si son las 10 de la mañana, el cielo
+ * es de día en los dos temas; el oscuro solo le baja el brillo con un velo
+ * (--velo-cielo) para que no compita con los paneles.
  *
  * El ícono muestra a dónde vas, no dónde estás — que es la convención: con
  * tema claro se ve una luna (clic = oscurecer) y con tema oscuro, un sol.
