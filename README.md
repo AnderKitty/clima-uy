@@ -1,4 +1,4 @@
-# Clima UY
+# Pampero
 
 Visor del tiempo para Uruguay construido sobre los datos de INUMET.
 
@@ -163,50 +163,39 @@ node tools/simplificar.mjs ury.geojson public/uruguay.json 0.008
 
 ## Desplegar
 
-La web es estática y vive en **GitHub Pages**; la API corre en un **VPS**,
-porque Pages no ejecuta código y el navegador no puede hablar con INUMET
-directamente (no mandan CORS).
+**No hay servidor.** Pages no ejecuta código y el navegador no puede hablar con
+INUMET directamente (no mandan CORS), así que el scraping corre en CI: cada
+media hora `tools/generar.mjs` consulta INUMET y deja los JSON ya normalizados
+junto al sitio.
 
 ```
-clima.anderkitty.pink      ──►  GitHub Pages   (public/, estático)
-api-clima.anderkitty.pink  ──►  VPS            (Caddy :443 → node :8080)
+                      cron */30 (GitHub Actions)
+                                 │
+                   node tools/generar.mjs dist
+                                 │
+clima.anderkitty.pink  ◄──  gh-pages  (sitio + api/*.json)
 ```
 
-`public/index.html` trae un `<meta name="clima-api">` con la URL de la API. En
-`localhost` se ignora y todo va contra el mismo origen, así que para desarrollar
-alcanza con `node server.js`.
+Los archivos que produce son exactamente las rutas que sirve `server.js`
+(`api/ahora.json`, `api/pronostico.json`, `api/avisos.json`,
+`api/estacion/<id>.json`), así que el front no distingue entre local y
+producción. Para desarrollar alcanza con `node server.js`.
 
-### VPS
+`public/index.html` trae un `<meta name="clima-api">` vacío: mismo origen. Poner
+una URL ahí vuelve a apuntar a un backend propio, por si algún día el scraping
+tiene que correr fuera de CI.
 
-```bash
-VPS=root@tu.vps.ip SSHPASS=... deploy/subir.sh   # rsync + deploy/instalar.sh
-```
+> **Nota histórica.** Hubo una API en un VPS (`api-clima.anderkitty.pink`), con
+> Caddy y límites de cgroup para convivir con un scanner que barría 2.5 M de IPs
+> por día. El proveedor suspendió la red de esa máquina y el sitio se cayó
+> entero. Generar en CI eliminó esa dependencia. Los archivos de `deploy/` siguen
+> en el repo por si hiciera falta volver, pero no se usan.
 
-`instalar.sh` es idempotente e instala solo desde los repos de Debian
-(nodejs 20, caddy 2.6). Caddy resuelve TLS solo vía Let's Encrypt; si el DNS
-todavía no resuelve, reintenta sin que haya que reinstalar nada.
+### El cron
 
-### Convivir con otro servicio en el mismo VPS
-
-Este VPS también corre un scanner OSINT que barre 2.5M de IPs por día
-(04:00–18:00 hora UY, pico **1 GB de 1.9 GB**, y la máquina **no tiene swap**).
-Ya hubo OOM kills ahí. Por eso `deploy/clima-uy.service` lleva:
-
-| Límite | Valor | Por qué |
-|---|---|---|
-| `MemoryMax` | 192M | Tope de cgroup: si este servicio se desmadra el kernel lo mata **a él**, no al scanner. Medido en régimen: ~27 MB. |
-| `MemoryHigh` | 150M | Presión antes de matar. |
-| `Nice` / `CPUWeight` | 10 / 20 | Un solo vCPU: ante contención el barrido gana. |
-| `ProtectHome` | true | El servicio no ve `/home/deploy` ni los datos del OSINT. |
-
-`instalar.sh` además se niega a correr si detecta el barrido activo (`FORZAR=1`
-para saltearlo). Caddy tiene su propio drop-in con los mismos topes.
-
-### Fallback estático
-
-Si algún día no querés depender del VPS, `node tools/generar.mjs` congela una
-foto de los datos en `dist/` y el sitio funciona entero desde Pages — con el
-dato viejo de la última corrida.
+GitHub apaga los workflows programados en repos sin actividad por 60 días. Si
+los datos se congelan, es eso: se reactiva con un commit o desde la pestaña
+Actions.
 
 ## Licencia y atribución
 

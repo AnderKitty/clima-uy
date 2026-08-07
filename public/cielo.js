@@ -9,50 +9,55 @@ const $ = (s) => document.querySelector(s);
 /**
  * Paletas por condición y momento del día. `amb` es el color de acento que
  * toma el resto de la interfaz, así que el sitio entero se tiñe con el clima.
+ *
+ * `dia` va con el tema claro y `noche` con el oscuro — el cielo y la interfaz
+ * no pueden discrepar. Por eso cada variante lleva su propio `amb` y su propio
+ * tinte de nube: sobre fondo claro el acento tiene que ser oscuro para leerse,
+ * y las nubes tienen que ser blancas; sobre fondo oscuro, al revés.
  */
 const CIELOS = {
   despejado: {
-    dia: { grad: ['#152038', '#2a3c68', '#7d5a3c', '#d0904c'], nubes: .28, sol: 1,
-           solColor: '#ffcf7a', solPos: [85, 12], estrellas: 0, amb: '#ffcf8a',
-           nube: ['rgba(244,228,208,.82)', 'rgba(186,166,166,.30)'] },
+    dia: { grad: ['#3f86cf', '#69a8e0', '#9ccbee', '#d3e8f7'], nubes: .5, sol: 1,
+           solColor: '#fff6d0', solPos: [85, 12], estrellas: 0, amb: '#b4630f',
+           nube: ['rgba(255,255,255,.98)', 'rgba(212,231,247,.55)'] },
     noche: { grad: ['#070b16', '#0d1526', '#16233c'], nubes: .22, sol: .55,
              solColor: '#cfe0ff', solPos: [85, 12], estrellas: 1, amb: '#aab8dd',
              nube: ['rgba(150,166,205,.52)', 'rgba(90,104,140,.22)'] },
   },
   nuboso: {
-    dia: { grad: ['#18202f', '#26324a', '#3a4a66'], nubes: .7, sol: .45,
-           solColor: '#ffdca0', solPos: [82, 14], estrellas: 0, amb: '#9db8ff',
-           nube: ['rgba(214,224,250,.85)', 'rgba(150,168,205,.32)'] },
+    dia: { grad: ['#6d94ba', '#8fb0cd', '#b8cee0', '#d5e2ec'], nubes: .8, sol: .5,
+           solColor: '#fff2c8', solPos: [82, 14], estrellas: 0, amb: '#1f63b8',
+           nube: ['rgba(255,255,255,.95)', 'rgba(196,213,230,.60)'] },
     noche: { grad: ['#0d1420', '#182233', '#25344a'], nubes: .6, sol: .3,
              solColor: '#cfe0ff', solPos: [82, 14], estrellas: .6, amb: '#9db8ff',
              nube: ['rgba(142,160,202,.62)', 'rgba(84,100,138,.26)'] },
   },
   cubierto: {
-    dia: { grad: ['#1a2130', '#2b3546', '#414d61'], nubes: .85, sol: 0, estrellas: 0, amb: '#b9c6de',
-           nube: ['rgba(198,208,224,.80)', 'rgba(130,142,162,.34)'] },
+    dia: { grad: ['#8b98a6', '#a3aeb9', '#c2cad3'], nubes: .9, sol: 0, estrellas: 0, amb: '#4a5668',
+           nube: ['rgba(248,250,252,.92)', 'rgba(178,189,201,.60)'] },
     noche: { grad: ['#0c1119', '#171e29', '#232c3a'], nubes: .8, sol: 0, estrellas: 0, amb: '#8794aa',
              nube: ['rgba(122,134,154,.56)', 'rgba(70,80,96,.26)'] },
   },
   niebla: {
-    dia: { grad: ['#20262f', '#333c48', '#4c5765'], nubes: .95, sol: 0, estrellas: 0,
-           amb: '#c3cad1', niebla: 1,
-           nube: ['rgba(216,222,230,.72)', 'rgba(160,170,182,.35)'] },
+    dia: { grad: ['#b3bac1', '#c6cbd1', '#dee1e5'], nubes: .95, sol: 0, estrellas: 0,
+           amb: '#55606e', niebla: 1,
+           nube: ['rgba(252,253,254,.88)', 'rgba(198,205,212,.60)'] },
     noche: { grad: ['#11151b', '#1c222b', '#28303b'], nubes: .9, sol: 0, estrellas: 0,
              amb: '#8b95a3', niebla: 1,
              nube: ['rgba(150,158,170,.55)', 'rgba(96,104,116,.28)'] },
   },
   lluvia: {
-    dia: { grad: ['#121824', '#1f2a3b', '#2d3b50'], nubes: .8, sol: 0, estrellas: 0,
-           amb: '#8fb4ff', lluvia: 1,
-           nube: ['rgba(176,192,220,.76)', 'rgba(112,128,158,.34)'] },
+    dia: { grad: ['#5c7086', '#75899d', '#98aaba', '#b9c6d2'], nubes: .88, sol: 0, estrellas: 0,
+           amb: '#125f8c', lluvia: 1,
+           nube: ['rgba(230,237,244,.92)', 'rgba(148,165,183,.62)'] },
     noche: { grad: ['#0a1018', '#141d2a', '#1f2c3e'], nubes: .82, sol: 0, estrellas: 0,
              amb: '#7cb8f5', lluvia: 1,
              nube: ['rgba(120,140,176,.60)', 'rgba(66,82,110,.30)'] },
   },
   tormenta: {
-    dia: { grad: ['#0b1019', '#161e2e', '#232f45'], nubes: .92, sol: 0, estrellas: 0,
-           amb: '#a9b6d6', lluvia: 2, rayos: 1,
-           nube: ['rgba(148,160,190,.72)', 'rgba(78,88,114,.38)'] },
+    dia: { grad: ['#414b5a', '#57616f', '#767f8d', '#98a0ac'], nubes: .95, sol: 0, estrellas: 0,
+           amb: '#36414f', lluvia: 2, rayos: 1,
+           nube: ['rgba(198,206,218,.88)', 'rgba(110,120,136,.60)'] },
     noche: { grad: ['#070a10', '#101722', '#1a2433'], nubes: .95, sol: 0, estrellas: 0,
              amb: '#a9b6d6', lluvia: 2, rayos: 1,
              nube: ['rgba(110,122,150,.62)', 'rgba(54,62,84,.34)'] },
@@ -272,6 +277,12 @@ function arrancarAnimacion(lluvia, rayos) {
   let gotas = [];
   let destello = 0;
 
+  // Las gotas se dibujan claras sobre cielo oscuro y oscuras sobre cielo
+  // diurno: con un solo color, en tema claro la lluvia desaparecía.
+  const claro = document.documentElement.dataset.tema === 'claro';
+  const tintaGota = claro ? '46,72,104' : '174,198,255';
+  const fuerzaGota = claro ? 1.5 : 1;
+
   const medir = () => {
     c.canvas.width = innerWidth;
     c.canvas.height = innerHeight;
@@ -294,7 +305,7 @@ function arrancarAnimacion(lluvia, rayos) {
       ctx.lineCap = 'round';
       ctx.lineWidth = lluvia === 2 ? 1.6 : 1.2;
       for (const d of gotas) {
-        ctx.strokeStyle = `rgba(174,198,255,${d.o})`;
+        ctx.strokeStyle = `rgba(${tintaGota},${Math.min(d.o * fuerzaGota, .95)})`;
         ctx.beginPath();
         ctx.moveTo(d.x, d.y);
         ctx.lineTo(d.x - 2, d.y + d.l);

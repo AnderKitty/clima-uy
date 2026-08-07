@@ -1,4 +1,4 @@
-// Clima UY — toda la UI. Sin dependencias: fetch + SVG a mano.
+// Pampero — toda la UI. Sin dependencias: fetch + SVG a mano.
 
 import { aplicarCielo } from './cielo.js';
 
@@ -138,10 +138,11 @@ const redondo = (v, d = 0) => (v === null || v === undefined ? null : Number(v).
 /**
  * De dónde salen los datos.
  *
- * En producción la web vive en GitHub Pages (estático) y la API en el VPS, así
- * que hay que apuntar a otro origen — por eso el server manda CORS. En local
- * `server.js` sirve las dos cosas, así que va contra el mismo origen y no hace
- * falta tocar nada para desarrollar.
+ * Por defecto, mismo origen: el build de CI deja los JSON junto al sitio, así
+ * que Pages se sirve solo. El meta `clima-api` permite apuntar a un servidor
+ * propio en otro origen —hubo uno en un VPS— por si alguna vez el scraping
+ * tiene que volver a correr fuera de CI; en local `server.js` sirve las dos
+ * cosas y no hace falta tocar nada.
  */
 const API = (() => {
   if (['localhost', '127.0.0.1', ''].includes(location.hostname)) return '';
@@ -313,24 +314,17 @@ function iconoObservado(e) {
   return uiEnOscuro() ? 'noche' : 'despejado';
 }
 
-function esDeNoche() {
-  const h = Number(nHora.format(new Date()).slice(0, 2));
-  return h < 7 || h >= 19;
-}
-
 /**
  * ¿La interfaz está renderizando en oscuro?
  *
- * El cielo tiene que usar SIEMPRE esta respuesta y no la hora: si va por el
- * reloj, a las 11 de la mañana con tema oscuro queda un cielo diurno claro
+ * El cielo tiene que usar SIEMPRE esta respuesta y no la hora: si fuera por el
+ * reloj, a las 11 de la mañana con tema oscuro quedaría un cielo diurno claro
  * detrás de paneles oscuros. Atado al tema, nunca pueden discrepar.
+ *
+ * Oscuro es el valor por defecto: sin preferencia guardada, no hay atributo.
  */
 function uiEnOscuro() {
-  // Ya no es "tema": la interfaz siempre es oscura. Esto decide si el cielo
-  // usa su variante nocturna. Por defecto sigue a la hora real de Uruguay.
-  const t = document.documentElement.dataset.tema;
-  if (t) return t === 'oscuro';
-  return esDeNoche();
+  return document.documentElement.dataset.tema !== 'claro';
 }
 
 /** Repinta el cielo con la condición de la estación elegida. */
@@ -1037,23 +1031,35 @@ function leyendaTemp(min, medio, max, rango, W, y) {
 // Tema
 // ---------------------------------------------------------------------------
 
+/**
+ * Tema claro u oscuro. Arrastra al cielo: claro va con la variante de día y
+ * oscuro con la de noche, para que el fondo y los paneles no discrepen.
+ *
+ * El ícono muestra a dónde vas, no dónde estás — que es la convención: con
+ * tema claro se ve una luna (clic = oscurecer) y con tema oscuro, un sol.
+ */
 function aplicarTema(t) {
-  if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t;
+  const claro = t === 'claro';
+  if (claro) document.documentElement.dataset.tema = 'claro';
   else delete document.documentElement.dataset.tema;
-  const esNoche = document.documentElement.dataset.tema
-    ? document.documentElement.dataset.tema === 'oscuro'
-    : esDeNoche();
-  $('#tema').textContent = esNoche ? '☀' : '☾';
-  $('#tema').title = esNoche ? 'Ver el cielo de día' : 'Ver el cielo de noche';
+
+  const b = $('#tema');
+  b.textContent = claro ? '☾' : '☀';
+  b.title = claro ? 'Pasar a tema oscuro' : 'Pasar a tema claro';
+  b.setAttribute('aria-label', b.title);
+  b.setAttribute('aria-pressed', String(claro));
 }
 
 function alternarTema() {
-  const actual = document.documentElement.dataset.tema;
-  const eraNoche = actual ? actual === 'oscuro' : esDeNoche();
-  const siguiente = eraNoche ? 'claro' : 'oscuro';
+  const siguiente = document.documentElement.dataset.tema === 'claro' ? 'oscuro' : 'claro';
   localStorage.setItem('tema', siguiente);
   aplicarTema(siguiente);
+  // El cielo forzado desde el panel de pruebas manda sobre el tema; si no,
+  // el cambio de tema tiene que arrastrarlo.
   refrescarCielo();
+  // Y el hero también: su ícono elige entre sol y luna según uiEnOscuro(), así
+  // que sin repintarlo quedaba una luna sobre un cielo diurno.
+  if (estado.seleccionada) pintarHero(estado.seleccionada);
   if (estado.serie) redibujarGraficos();
 }
 

@@ -1,8 +1,13 @@
-/* Clima UY — hoja única. Roles por variable para que el tema cambie en un lugar. */
+/* Pampero — hoja única. Roles por variable para que el tema cambie en un lugar. */
 
-/* El sitio es oscuro, como la maqueta: el cielo animado es navy en todas las
-   condiciones y un panel claro encima no cierra. El botón de la barra ya no
-   cambia el tema sino el momento del cielo (día / noche). */
+/* Dos temas de verdad, y el cielo va atado al tema: en claro el sitio es
+   blanco y el cielo es de día; en oscuro, negro y de noche. Un botón de la
+   barra que dijera "luna" y solo cambiara la animación era engañoso — ese
+   ícono significa modo oscuro en cualquier sitio del mundo. El día/noche del
+   cielo suelto vive ahora en el panel de pruebas, que es donde corresponde.
+
+   El oscuro es el de por defecto: es el que la maqueta pedía y con el que se
+   diseñaron los paneles de vidrio. */
 :root {
   color-scheme: dark;
 
@@ -30,6 +35,35 @@
 
   --cielo-a: #16314f;
   --cielo-b: #101d2c;
+  --velo-pie: rgba(8, 12, 20, .85);
+}
+
+/* Tema claro. No es el oscuro invertido: sobre un cielo diurno los paneles
+   tienen que ser casi blancos y las tintas bajar bastante de luminosidad para
+   sostener el contraste, y las rampas de color de los gráficos se oscurecen
+   para no lavarse contra el fondo. */
+:root[data-tema="claro"] {
+  color-scheme: light;
+
+  --plano:        #eef3fa;
+  --superficie:   #ffffff;
+  --superficie-2: #eaeff7;
+  --tinta:        #16202f;
+  --tinta-2:      #41506a;
+  --tinta-3:      #6b7a93;
+  --linea:        #dbe3ee;
+  --borde:        rgba(22, 32, 47, .14);
+
+  --serie-1:      #1f63b8;
+  --serie-lluvia: #0f8f6b;
+  --grid:         #dfe6f0;
+  --eje:          #c3cddc;
+
+  --sombra: 0 1px 2px rgba(20, 30, 50, .08), 0 12px 32px -14px rgba(20, 30, 50, .28);
+
+  --cielo-a: #cfe2f5;
+  --cielo-b: #a9c9e8;
+  --velo-pie: rgba(232, 239, 249, .92);
 }
 
 
@@ -377,7 +411,7 @@ th:first-child, td:first-child { text-align: left; }
 .pie::before {
   content: ''; position: absolute; z-index: -1; pointer-events: none;
   left: 50%; transform: translateX(-50%); width: 100vw; top: 0; bottom: 0;
-  background: linear-gradient(180deg, transparent, rgba(8, 12, 20, .85) 55%);
+  background: linear-gradient(180deg, transparent, var(--velo-pie) 55%);
 }
 
 .pie p { margin: 0 0 4px; }
@@ -456,6 +490,10 @@ th:first-child, td:first-child { text-align: left; }
   animation: latir 11s ease-in-out infinite alternate;
   will-change: opacity, transform;
 }
+/* Sobre un cielo diurno claro, `screen` lava el astro hasta hacerlo
+   desaparecer: ahí se pinta normal, que ya lee como sol. */
+:root[data-tema="claro"] .cielo-astro { mix-blend-mode: normal; }
+
 @keyframes latir {
   from { transform: scale(1) }
   to   { transform: scale(1.05) }
@@ -516,6 +554,15 @@ body { background: transparent; }
 .panel, .hero, .aviso, .error-carga {
   backdrop-filter: blur(14px) saturate(1.1);
   background-color: color-mix(in oklab, var(--superficie) 82%, transparent);
+}
+/* En claro el fondo puede ser un cielo de tormenta gris medio, bastante más
+   contrastado que el navy del oscuro: los paneles necesitan algo más de cuerpo
+   para que el texto no se apoye sobre las nubes. */
+:root[data-tema="claro"] .panel,
+:root[data-tema="claro"] .hero,
+:root[data-tema="claro"] .aviso,
+:root[data-tema="claro"] .error-carga {
+  background-color: color-mix(in oklab, var(--superficie) 91%, transparent);
 }
 .hero { background-image: none; }
 
@@ -584,21 +631,22 @@ main { counter-reset: seccion; }
 .pruebas-abrir {
   position: fixed; right: 16px; bottom: 16px; z-index: 40;
   padding: 9px 16px; border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, .16);
-  background: rgba(14, 20, 32, .9); color: var(--tinta-2);
+  border: 1px solid var(--borde);
+  background: color-mix(in oklab, var(--superficie) 92%, transparent);
+  color: var(--tinta-2);
   font: inherit; font-size: .78rem; letter-spacing: .02em; cursor: pointer;
   backdrop-filter: blur(10px);
   box-shadow: 0 6px 22px rgba(0, 0, 0, .45);
 }
-.pruebas-abrir:hover { color: var(--tinta); border-color: rgba(255, 255, 255, .3); }
-.pruebas-abrir.activo { background: rgba(30, 44, 70, .95); color: var(--tinta); }
+.pruebas-abrir:hover { color: var(--tinta); border-color: var(--tinta-3); }
+.pruebas-abrir.activo { background: var(--superficie-2); color: var(--tinta); }
 
 .pruebas {
   position: fixed; right: 16px; bottom: 62px; z-index: 40;
   width: min(330px, calc(100vw - 32px));
   padding: 14px 16px 16px; border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, .12);
-  background: rgba(11, 16, 26, .94);
+  border: 1px solid var(--borde);
+  background: color-mix(in oklab, var(--superficie) 95%, transparent);
   backdrop-filter: blur(14px);
   box-shadow: 0 18px 48px rgba(0, 0, 0, .55);
 }
@@ -615,12 +663,12 @@ main { counter-reset: seccion; }
 
 .prueba-btn {
   padding: 6px 11px; border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, .13);
-  background: rgba(255, 255, 255, .05); color: var(--tinta-2);
+  border: 1px solid var(--borde);
+  background: var(--superficie-2); color: var(--tinta-2);
   font: inherit; font-size: .76rem; cursor: pointer;
   transition: background .12s, color .12s, border-color .12s;
 }
-.prueba-btn:hover { background: rgba(255, 255, 255, .1); color: var(--tinta); }
+.prueba-btn:hover { background: var(--linea); color: var(--tinta); }
 .prueba-btn.activo {
   background: color-mix(in oklab, var(--amb, #9db8ff) 26%, transparent);
   border-color: color-mix(in oklab, var(--amb, #9db8ff) 55%, transparent);
