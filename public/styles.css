@@ -39,6 +39,7 @@
   --cielo-b: #101d2c;
   --velo-pie: rgba(8, 12, 20, .85);
   --velo-cielo: rgba(6, 10, 18, .58);
+  --mapa-linea: #47586f;
 }
 
 /* Tema claro. No es el oscuro invertido: sobre un cielo diurno los paneles
@@ -68,6 +69,7 @@
   --cielo-b: #a9c9e8;
   --velo-pie: rgba(232, 239, 249, .92);
   --velo-cielo: transparent;
+  --mapa-linea: #adbdd1;
 }
 
 
@@ -328,17 +330,21 @@ th:first-child, td:first-child { text-align: left; }
 .mapa-envoltorio { overflow-x: auto; }
 #mapa svg { display: block; width: 100%; height: auto; min-width: 320px; }
 
-/* El país es contexto, no dato: tinta recesiva para que manden los puntos. */
+/* El país es contexto, no dato: tinta recesiva para que manden los puntos.
+   Pero el borde necesita su propia variable: con --linea, el trazo (#232d3d)
+   y el relleno (#1c2534) eran casi el mismo color y los departamentos no se
+   distinguían. --mapa-linea tiene contraste medido contra el relleno. */
 .mapa-depto {
   fill: var(--superficie-2);
-  stroke: var(--linea);
-  stroke-width: 1;
+  stroke: var(--mapa-linea);
+  stroke-width: 1.2;
   stroke-linejoin: round;
 }
 
 .mapa-punto { stroke: var(--superficie); stroke-width: 1.5; }
 .mapa-etiqueta {
-  fill: var(--tinta); font-size: 8px; font-family: system-ui, sans-serif;
+  fill: var(--tinta); font-size: 11px; font-weight: 600;
+  font-family: system-ui, sans-serif;
   font-variant-numeric: tabular-nums; pointer-events: none;
 }
 

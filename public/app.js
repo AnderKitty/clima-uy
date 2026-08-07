@@ -757,6 +757,37 @@ const RAMPA_FRIA = ['#104281', '#1c5cab', '#2a78d6', '#5598e7', '#9ec5f4'];
 const RAMPA_CALIDA = ['#f5c6ad', '#ec835a', '#e0603a', '#c9382a', '#a3241c'];
 const NEUTRO = '#c3c2b7';
 
+/**
+ * Blanco o tinta oscura, según la luminancia real del relleno.
+ *
+ * Antes se decidía con un umbral sobre la escala divergente (`|d| > 0.45`), que
+ * no es lo mismo: los tonos del medio de la rampa fría son azules bastante
+ * oscuros y se llevaban texto oscuro encima, ilegible. La luminancia mide lo
+ * que importa, que es el contraste contra el círculo.
+ */
+const TINTA_OSCURA = '#0d1420';
+
+function luminancia(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function tintaSobre(hex) {
+  const L = luminancia(hex);
+  const contraste = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  // Comparar los dos contrastes y no cortar por un umbral de luminancia: sobre
+  // el naranja medio (#ec835a, L≈0.35) un umbral en 0.4 elige blanco, que da
+  // 2.6:1, cuando la tinta oscura da 6.9:1. El umbral acierta en los extremos
+  // y falla justo en el medio de las rampas.
+  return contraste(L, 1) >= contraste(L, luminancia(TINTA_OSCURA))
+    ? '#ffffff'
+    : TINTA_OSCURA;
+}
+
 function colorTemp(v, medio, rango) {
   const d = (v - medio) / (rango || 1);
   if (Math.abs(d) < 0.12) return NEUTRO;
@@ -792,7 +823,7 @@ function pintarMapa(estaciones) {
   const medio = temps[Math.floor(temps.length / 2)];
   const rango = Math.max(temps[temps.length - 1] - medio, medio - temps[0], 1);
 
-  const R = 12;
+  const R = 13;
   const puestos = pts.map((p) => ({ ...p, px: X(p.lon), py: Y(p.lat) }));
   separar(puestos, R);
 
@@ -803,15 +834,16 @@ function pintarMapa(estaciones) {
   // Los más extremos arriba: si algo se tapa, que quede visible lo que llama la atención.
   for (const p of puestos.sort((a, b) => Math.abs(a.temp - medio) - Math.abs(b.temp - medio))) {
     const g = el('g');
+    const relleno = colorTemp(p.temp, medio, rango);
     g.append(el('circle', {
-      class: 'mapa-punto', cx: p.px, cy: p.py, r: R, fill: colorTemp(p.temp, medio, rango),
+      class: 'mapa-punto', cx: p.px, cy: p.py, r: R, fill: relleno,
     }));
     const titulo = el('title');
     titulo.textContent = `${p.nombre} — ${p.temp} °C`;
     g.append(titulo);
     const t = el('text', {
-      class: 'mapa-etiqueta', x: p.px, y: p.py + 3, 'text-anchor': 'middle',
-      fill: Math.abs((p.temp - medio) / rango) > 0.45 ? '#fff' : 'var(--tinta)',
+      class: 'mapa-etiqueta', x: p.px, y: p.py + 3.5, 'text-anchor': 'middle',
+      fill: tintaSobre(relleno),
     });
     t.textContent = Math.round(p.temp);
     g.append(t);
