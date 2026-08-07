@@ -168,6 +168,16 @@ async function json(ruta) {
   return r.json();
 }
 
+/**
+ * Panel de pruebas: en local siempre, y en cualquier lado con `?pruebas` en la
+ * URL —útil para mirar el sitio ya publicado en un teléfono de verdad, donde
+ * el blur y las animaciones se comportan distinto que en el escritorio.
+ */
+function modoPruebas() {
+  return ['localhost', '127.0.0.1', ''].includes(location.hostname)
+    || new URLSearchParams(location.search).has('pruebas');
+}
+
 async function iniciar() {
   aplicarTema(localStorage.getItem('tema'));
   $('#tema').addEventListener('click', alternarTema);
@@ -204,12 +214,18 @@ async function iniciar() {
     // Enganche de depuración, solo en local: permite inspeccionar el estado y
     // forzar escenarios (dos alertas superpuestas, por ejemplo) sin esperar a
     // que la realidad los produzca.
-    if (['localhost', '127.0.0.1'].includes(location.hostname)) {
-      window.clima = {
+    if (modoPruebas()) {
+      const api = {
         estado,
+        aplicarCielo,
+        refrescarCielo,
         repintarMapa: () => pintarMapa(estado.estaciones.filter((e) => e.pais === 'UY')),
         repintarAvisos: () => pintarAvisos(estado.avisos),
       };
+      window.clima = api;
+      // Dinámico: en producción el archivo ni se baja.
+      const { montarPruebas } = await import('./pruebas.js');
+      montarPruebas(api);
     }
   } catch (err) {
     const caja = nodo('div', 'error-carga');
@@ -319,6 +335,9 @@ function uiEnOscuro() {
 
 /** Repinta el cielo con la condición de la estación elegida. */
 function refrescarCielo() {
+  // El panel de pruebas fija una condición a mano; sin esto, cambiar de
+  // estación la pisaría con el clima real y no se podría mirar nada.
+  if (estado.cieloForzado) return;
   if (estado.seleccionada) aplicarCielo(iconoObservado(estado.seleccionada), uiEnOscuro());
 }
 
@@ -656,7 +675,10 @@ function nodo(tag, clase, texto) {
 function pintarAvisos(datos) {
   const cont = $('#avisos');
   const items = [...(datos?.advertencias ?? []), ...(datos?.avisos ?? [])];
-  if (!items.length) return;
+  // Vaciar de verdad al no haber nada: si INUMET da de baja una advertencia y
+  // se repinta, el banner viejo se quedaba en pantalla anunciando una alerta
+  // que ya no existe.
+  if (!items.length) { cont.replaceChildren(); cont.hidden = true; return; }
 
   cont.hidden = false;
   cont.replaceChildren(...items.map((a) => {
@@ -817,11 +839,12 @@ function patronesAlerta(niveles) {
       patternUnits: 'userSpaceOnUse',
       patternTransform: `rotate(${ANGULO_TRAMA[nivel] ?? 45})`,
     });
-    // Suave a propósito: la mancha es contexto, los puntos de temperatura son
-    // el dato. El borde grueso es el que marca el área, no el relleno.
-    p.append(el('rect', { width: 9, height: 9, fill: color, 'fill-opacity': '.10' }));
+    // Suave, pero no tanto como para desaparecer: al 10 % sobre un mapa oscuro
+    // el amarillo no se veía. La mancha sigue siendo contexto —los puntos de
+    // temperatura son el dato— pero tiene que leerse de un vistazo.
+    p.append(el('rect', { width: 9, height: 9, fill: color, 'fill-opacity': '.18' }));
     p.append(el('line', {
-      x1: 0, y1: 0, x2: 0, y2: 9, stroke: color, 'stroke-width': 2.4, 'stroke-opacity': '.26',
+      x1: 0, y1: 0, x2: 0, y2: 9, stroke: color, 'stroke-width': 2.6, 'stroke-opacity': '.45',
     }));
     defs.append(p);
   }
@@ -883,7 +906,14 @@ function capaAlertas(X, Y) {
 
   for (const a of alertas) {
     for (const poly of a.poligonos ?? []) {
-      const p = el('path', { class: 'mapa-area-alerta', d: aPath(poly, X, Y) });
+      const d = aPath(poly, X, Y);
+
+      // Halo oscuro debajo del contorno: el borde de la alerta cruza
+      // departamentos de distinto tono y, sin él, los tramos que caen sobre
+      // una zona clara se pierden. Va primero para quedar por abajo.
+      g.append(Object.assign(el('path', { class: 'mapa-halo-alerta', d }), {}));
+
+      const p = el('path', { class: 'mapa-area-alerta', d });
       p.style.fill = `url(#trama-alerta-${a.nivel})`;
       p.style.stroke = a.color;
       p.style.strokeWidth = '2.6';

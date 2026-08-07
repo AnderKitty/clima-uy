@@ -13,37 +13,49 @@ const $ = (s) => document.querySelector(s);
 const CIELOS = {
   despejado: {
     dia: { grad: ['#152038', '#2a3c68', '#7d5a3c', '#d0904c'], nubes: .28, sol: 1,
-           solColor: '#ffcf7a', solPos: [74, 72], estrellas: 0, amb: '#ffcf8a' },
+           solColor: '#ffcf7a', solPos: [74, 72], estrellas: 0, amb: '#ffcf8a',
+           nube: ['rgba(244,228,208,.82)', 'rgba(186,166,166,.30)'] },
     noche: { grad: ['#070b16', '#0d1526', '#16233c'], nubes: .22, sol: .55,
-             solColor: '#cfe0ff', solPos: [76, 20], estrellas: 1, amb: '#aab8dd' },
+             solColor: '#cfe0ff', solPos: [76, 20], estrellas: 1, amb: '#aab8dd',
+             nube: ['rgba(150,166,205,.52)', 'rgba(90,104,140,.22)'] },
   },
   nuboso: {
     dia: { grad: ['#18202f', '#26324a', '#3a4a66'], nubes: .7, sol: .45,
-           solColor: '#ffdca0', solPos: [72, 30], estrellas: 0, amb: '#9db8ff' },
+           solColor: '#ffdca0', solPos: [72, 30], estrellas: 0, amb: '#9db8ff',
+           nube: ['rgba(214,224,250,.85)', 'rgba(150,168,205,.32)'] },
     noche: { grad: ['#0d1420', '#182233', '#25344a'], nubes: .6, sol: .3,
-             solColor: '#cfe0ff', solPos: [74, 22], estrellas: .6, amb: '#9db8ff' },
+             solColor: '#cfe0ff', solPos: [74, 22], estrellas: .6, amb: '#9db8ff',
+             nube: ['rgba(142,160,202,.62)', 'rgba(84,100,138,.26)'] },
   },
   cubierto: {
-    dia: { grad: ['#1a2130', '#2b3546', '#414d61'], nubes: .85, sol: 0, estrellas: 0, amb: '#b9c6de' },
-    noche: { grad: ['#0c1119', '#171e29', '#232c3a'], nubes: .8, sol: 0, estrellas: 0, amb: '#8794aa' },
+    dia: { grad: ['#1a2130', '#2b3546', '#414d61'], nubes: .85, sol: 0, estrellas: 0, amb: '#b9c6de',
+           nube: ['rgba(198,208,224,.80)', 'rgba(130,142,162,.34)'] },
+    noche: { grad: ['#0c1119', '#171e29', '#232c3a'], nubes: .8, sol: 0, estrellas: 0, amb: '#8794aa',
+             nube: ['rgba(122,134,154,.56)', 'rgba(70,80,96,.26)'] },
   },
   niebla: {
     dia: { grad: ['#20262f', '#333c48', '#4c5765'], nubes: .95, sol: 0, estrellas: 0,
-           amb: '#c3cad1', niebla: 1 },
+           amb: '#c3cad1', niebla: 1,
+           nube: ['rgba(216,222,230,.72)', 'rgba(160,170,182,.35)'] },
     noche: { grad: ['#11151b', '#1c222b', '#28303b'], nubes: .9, sol: 0, estrellas: 0,
-             amb: '#8b95a3', niebla: 1 },
+             amb: '#8b95a3', niebla: 1,
+             nube: ['rgba(150,158,170,.55)', 'rgba(96,104,116,.28)'] },
   },
   lluvia: {
     dia: { grad: ['#121824', '#1f2a3b', '#2d3b50'], nubes: .8, sol: 0, estrellas: 0,
-           amb: '#8fb4ff', lluvia: 1 },
+           amb: '#8fb4ff', lluvia: 1,
+           nube: ['rgba(176,192,220,.76)', 'rgba(112,128,158,.34)'] },
     noche: { grad: ['#0a1018', '#141d2a', '#1f2c3e'], nubes: .82, sol: 0, estrellas: 0,
-             amb: '#7cb8f5', lluvia: 1 },
+             amb: '#7cb8f5', lluvia: 1,
+             nube: ['rgba(120,140,176,.60)', 'rgba(66,82,110,.30)'] },
   },
   tormenta: {
     dia: { grad: ['#0b1019', '#161e2e', '#232f45'], nubes: .92, sol: 0, estrellas: 0,
-           amb: '#a9b6d6', lluvia: 2, rayos: 1 },
+           amb: '#a9b6d6', lluvia: 2, rayos: 1,
+           nube: ['rgba(148,160,190,.72)', 'rgba(78,88,114,.38)'] },
     noche: { grad: ['#070a10', '#101722', '#1a2433'], nubes: .95, sol: 0, estrellas: 0,
-             amb: '#a9b6d6', lluvia: 2, rayos: 1 },
+             amb: '#a9b6d6', lluvia: 2, rayos: 1,
+             nube: ['rgba(110,122,150,.62)', 'rgba(54,62,84,.34)'] },
   },
 };
 
@@ -83,26 +95,77 @@ function montar() {
 }
 
 /**
- * Nubes: manchas grandes con degradado radial y desenfoque.
+ * Nubes: masas de varios lóbulos desenfocados, repartidas en tres planos.
  *
- * Es la técnica de la maqueta original, con sus valores. La probé primero con
- * blanco puro y quedaban "puntos blancos moviéndose"; después con siluetas SVG
- * y quedaba un borrón. Lo que la hace funcionar no es la forma sino el color:
- * gris azulado (no blanco) sobre un cielo oscuro. El blanco puro salta como
- * mancha contra cualquier fondo; este tono se integra como bruma.
+ * La técnica base es la de la maqueta —degradado radial y blur— y lo que la
+ * hace funcionar es el color: gris azulado, no blanco. El blanco puro salta
+ * como mancha contra cualquier fondo; este tono se integra como bruma.
+ *
+ * Sobre eso, dos cosas que antes no estaban. Una sola elipse por nube se lee
+ * como óvalo perfecto, que es justo lo que delata que es CSS: ahora cada nube
+ * son cinco lóbulos de distinto tamaño con base plana y tope irregular, que el
+ * blur funde en una silueta orgánica. No es volver a las siluetas SVG —esas
+ * quedaban recortadas por el viewBox—, porque acá no hay recorte: son cajas
+ * normales y el desenfoque las une.
+ *
+ * Y los tres planos dan paralaje: las del fondo van chicas, lentas, tenues y
+ * muy desenfocadas; las del frente, grandes, rápidas y más definidas. Es lo
+ * que da profundidad en vez de una tira de manchas a la misma distancia.
  */
+const PLANOS = [
+  { n: 4, w: [130, 240], top: [-2, 26], op: [.20, .36], blur: 34, dur: [150, 230] },
+  { n: 3, w: [230, 380], top: [4, 40], op: [.34, .55], blur: 25, dur: [95, 150] },
+  { n: 3, w: [340, 540], top: [14, 56], op: [.45, .72], blur: 17, dur: [55, 90] },
+];
+
+/**
+ * Lóbulos, en fracción de la caja de la nube. La base es ancha y achatada; los
+ * bultos de arriba, de tamaños distintos y sin simetría. El orden importa poco
+ * porque el blur los promedia, pero las proporciones no: si todos miden igual
+ * vuelve a leerse como un óvalo.
+ */
+const LOBULOS = [
+  [.02, .46, .96, .54],
+  [.10, .10, .46, .72],
+  [.38, .00, .40, .64],
+  [.60, .20, .36, .60],
+  [.00, .32, .30, .52],
+];
+
+const entre = ([a, b]) => a + Math.random() * (b - a);
+
 function nubes() {
-  const capa = [];
-  for (let i = 0; i < 9; i++) {
-    const w = 180 + Math.random() * 260;
-    const dur = 50 + Math.random() * 70;
-    capa.push(
-      `<span class="nube" style="width:${w.toFixed(0)}px;height:${(w * .55).toFixed(0)}px;` +
-      `top:${(Math.random() * 55).toFixed(1)}%;opacity:${(.5 + Math.random() * .5).toFixed(2)};` +
-      `animation-duration:${dur.toFixed(0)}s;animation-delay:${(-Math.random() * dur).toFixed(0)}s"></span>`
-    );
-  }
-  return capa.join('');
+  const salida = [];
+
+  PLANOS.forEach((plano, profundidad) => {
+    for (let i = 0; i < plano.n; i++) {
+      const w = entre(plano.w);
+      const h = w * (.42 + Math.random() * .16);
+      const dur = entre(plano.dur);
+      const bob = 18 + Math.random() * 16;
+
+      const lobulos = LOBULOS.map(([x, y, lw, lh]) => {
+        // Un poco de ruido por lóbulo: si no, las diez nubes son la misma
+        // figura repetida y el ojo lo nota enseguida.
+        const k = .88 + Math.random() * .24;
+        return `<i style="left:${(x * 100).toFixed(1)}%;top:${(y * 100).toFixed(1)}%;` +
+               `width:${(lw * k * 100).toFixed(1)}%;height:${(lh * k * 100).toFixed(1)}%"></i>`;
+      }).join('');
+
+      salida.push(
+        `<span class="nube" style="top:${entre(plano.top).toFixed(1)}%;` +
+        `opacity:${entre(plano.op).toFixed(2)};z-index:${profundidad};` +
+        `animation-duration:${dur.toFixed(0)}s;` +
+        `animation-delay:${(-Math.random() * dur).toFixed(0)}s">` +
+          `<span class="nube-cuerpo" style="width:${w.toFixed(0)}px;height:${h.toFixed(0)}px;` +
+          `filter:blur(${plano.blur}px);animation-duration:${bob.toFixed(0)}s;` +
+          `animation-delay:${(-Math.random() * bob).toFixed(0)}s">${lobulos}</span>` +
+        `</span>`
+      );
+    }
+  });
+
+  return salida.join('');
 }
 
 function estrellas(n) {
@@ -136,6 +199,13 @@ export function aplicarCielo(nombre, esNoche) {
     .join(', ');
   c.grad.style.background = `linear-gradient(180deg, ${paradas})`;
   c.nubes.style.opacity = s.nubes;
+
+  // Las nubes se tiñen con la condición: cálidas contra un sol bajo, plomizas
+  // con tormenta. Con un gris fijo, el cielo cambiaba y ellas no, y se notaba.
+  if (s.nube) {
+    c.nubes.style.setProperty('--nube-a', s.nube[0]);
+    c.nubes.style.setProperty('--nube-b', s.nube[1]);
+  }
   c.estrellas.style.opacity = s.estrellas ?? 0;
   c.raiz.classList.toggle('cielo-con-niebla', !!s.niebla);
 
