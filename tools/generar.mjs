@@ -78,12 +78,29 @@ async function sellarEstaticos() {
   console.log(`sellos: css=${vCss} app=${vApp} cielo=${vCielo} pruebas=${vPruebas}`);
 }
 
-const [datosAhora, datosPron, datosAvisos, todas] = await Promise.all([
-  ahora(),
-  pronostico().catch((e) => { console.warn('pronóstico falló:', e.message); return null; }),
-  avisos().catch((e) => { console.warn('avisos falló:', e.message); return null; }),
-  estacion(),
-]);
+/**
+ * Observaciones y series son obligatorias; pronóstico y avisos, opcionales.
+ *
+ * Si INUMET no da las observaciones no hay sitio que publicar, y sobrescribir
+ * lo anterior con nada sería peor que no tocarlo: al abortar acá, el paso de
+ * publicar se saltea y gh-pages sigue sirviendo la última foto buena. O sea que
+ * un fallo de este build NO tira la web abajo — solo deja los datos como
+ * estaban hasta la próxima corrida, media hora después.
+ */
+let datosAhora, datosPron, datosAvisos, todas;
+try {
+  [datosAhora, datosPron, datosAvisos, todas] = await Promise.all([
+    ahora(),
+    pronostico().catch((e) => { console.warn('pronóstico falló:', e.message); return null; }),
+    avisos().catch((e) => { console.warn('avisos falló:', e.message); return null; }),
+    estacion(),
+  ]);
+} catch (err) {
+  console.error(`\nNo se pudo obtener lo esencial de INUMET: ${err.message}`);
+  console.error('Ya se reintentó; el origen sigue sin responder.');
+  console.error('No se publica nada: el sitio conserva los datos de la corrida anterior.');
+  process.exit(1);
+}
 
 // Sello de generación: sin servidor, es la única forma de que la página sepa
 // (y muestre) qué tan vieja es la foto que está mirando.
