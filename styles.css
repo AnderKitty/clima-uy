@@ -1,0 +1,782 @@
+/* Clima UY — hoja única. Roles por variable para que el tema cambie en un lugar. */
+
+/* Dos temas: el botón de la barra cambia ÚNICAMENTE el color del sitio.
+
+   El cielo no lo toca. El cielo muestra la hora real de Uruguay y la condición
+   medida — si son las 10 de la mañana es de día, tengas la web negra o blanca.
+   Atarlos fue un error: pasabas a oscuro a mediodía y el cielo se ponía
+   nocturno, mintiendo sobre el tiempo, que es justo lo que el sitio informa.
+   Lo único que hace el tema oscuro con el cielo es bajarle el brillo con un
+   velo (--velo-cielo), para que un azul de mediodía no compita con los paneles.
+
+   Oscuro es el valor por defecto. */
+:root {
+  color-scheme: dark;
+
+  --plano:        #0b0f18;
+  --superficie:   #131a26;
+  --superficie-2: #1c2534;
+  --tinta:        #eaf0fb;
+  --tinta-2:      #aebbd6;
+  --tinta-3:      #7e8ca6;
+  --linea:        #232d3d;
+  --borde:        rgba(174, 187, 214, .16);
+
+  --serie-1:      #6ea8f0;
+  --serie-lluvia: #35c79a;
+  --grid:         #202a39;
+  --eje:          #2c3849;
+
+  --alerta-amarilla: #FFD800;
+  --alerta-naranja:  #FF6A00;
+  --alerta-roja:     #E00000;
+
+  --sombra: 0 1px 2px rgba(0, 0, 0, .35), 0 12px 32px -14px rgba(0, 0, 0, .7);
+  --radio: 14px;
+  --ancho: 1120px;
+
+  --cielo-a: #16314f;
+  --cielo-b: #101d2c;
+  --velo-pie: rgba(8, 12, 20, .85);
+  --velo-cielo: rgba(6, 10, 18, .58);
+  --mapa-linea: #47586f;
+}
+
+/* Tema claro. No es el oscuro invertido: sobre un cielo diurno los paneles
+   tienen que ser casi blancos y las tintas bajar bastante de luminosidad para
+   sostener el contraste, y las rampas de color de los gráficos se oscurecen
+   para no lavarse contra el fondo. */
+:root[data-tema="claro"] {
+  color-scheme: light;
+
+  --plano:        #eef3fa;
+  --superficie:   #ffffff;
+  --superficie-2: #eaeff7;
+  --tinta:        #16202f;
+  --tinta-2:      #41506a;
+  --tinta-3:      #6b7a93;
+  --linea:        #dbe3ee;
+  --borde:        rgba(22, 32, 47, .14);
+
+  --serie-1:      #1f63b8;
+  --serie-lluvia: #0f8f6b;
+  --grid:         #dfe6f0;
+  --eje:          #c3cddc;
+
+  --sombra: 0 1px 2px rgba(20, 30, 50, .08), 0 12px 32px -14px rgba(20, 30, 50, .28);
+
+  --cielo-a: #cfe2f5;
+  --cielo-b: #a9c9e8;
+  --velo-pie: rgba(232, 239, 249, .92);
+  --velo-cielo: transparent;
+  --mapa-linea: #adbdd1;
+}
+
+
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--plano);
+  color: var(--tinta);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; text-decoration-color: var(--tinta-3); text-underline-offset: 2px; }
+
+.sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ---------- barra ---------- */
+
+.barra {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  flex-wrap: wrap;
+  max-width: var(--ancho); margin: 0 auto; padding: 20px 20px 8px;
+}
+
+/* El h1 va oculto, así que los controles son lo único en flujo: sin este
+   margen `space-between` los pegaría a la izquierda. */
+.barra-acciones { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+
+.selector select {
+  appearance: none;
+  font: inherit; font-size: .9rem;
+  color: var(--tinta); background: var(--superficie);
+  border: 1px solid var(--borde); border-radius: 999px;
+  padding: 8px 34px 8px 14px; max-width: min(58vw, 320px);
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--tinta-3) 50%),
+                    linear-gradient(135deg, var(--tinta-3) 50%, transparent 50%);
+  background-position: right 16px center, right 11px center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+.selector select:focus-visible { outline: 2px solid var(--serie-1); outline-offset: 2px; }
+
+.btn-icono {
+  width: 38px; height: 38px; flex: none;
+  display: grid; place-items: center;
+  font-size: 1rem;
+  border: 1px solid var(--borde); border-radius: 999px;
+  background: var(--superficie); color: var(--tinta);
+  cursor: pointer;
+}
+.btn-icono:hover { background: var(--superficie-2); }
+.btn-icono:focus-visible { outline: 2px solid var(--serie-1); outline-offset: 2px; }
+
+/* ---------- estructura ---------- */
+
+main {
+  max-width: var(--ancho); margin: 0 auto; padding: 12px 20px 40px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+
+.cargando { color: var(--tinta-3); padding: 60px 0; text-align: center; }
+
+.panel {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  padding: 20px;
+}
+
+.panel-cabecera {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 18px;
+}
+.panel h2 { margin: 0; font-size: 1rem; font-weight: 620; letter-spacing: -.01em; }
+.panel-nota { margin: 0; font-size: .8rem; color: var(--tinta-3); }
+
+/* ---------- avisos ---------- */
+
+.avisos { display: flex; flex-direction: column; gap: 10px; }
+
+.aviso {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: var(--radio);
+  border: 1px solid var(--borde);
+  border-left: 4px solid var(--tono, var(--alerta-amarilla));
+  background: color-mix(in oklab, var(--tono, var(--alerta-amarilla)) 10%, var(--superficie));
+}
+.aviso-amarilla { --tono: var(--alerta-amarilla); }
+.aviso-naranja  { --tono: var(--alerta-naranja); }
+.aviso-roja     { --tono: var(--alerta-roja); }
+
+.aviso-icono { font-size: 1.1rem; line-height: 1.4; flex: none; }
+.aviso-cuerpo { min-width: 0; }
+.aviso-titulo { margin: 0 0 2px; font-weight: 620; font-size: .92rem; }
+.aviso-texto { margin: 0; font-size: .86rem; color: var(--tinta-2); }
+.aviso-meta { margin: 6px 0 0; font-size: .78rem; color: var(--tinta-3); }
+
+.aviso-zonas { margin-top: 8px; }
+.aviso-zonas summary {
+  cursor: pointer; font-size: .78rem; color: var(--tinta-2); width: fit-content;
+}
+.aviso-zonas ul {
+  margin: 8px 0 0; padding-left: 18px; max-height: 220px; overflow-y: auto;
+  font-size: .78rem; color: var(--tinta-2); line-height: 1.45;
+}
+.aviso-zonas li { margin-bottom: 4px; }
+
+/* ---------- hero ---------- */
+
+.hero {
+  display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; align-items: center;
+  padding: 28px;
+  border-radius: var(--radio);
+  border: 1px solid var(--borde);
+  background: linear-gradient(150deg, var(--cielo-a), var(--cielo-b));
+  box-shadow: var(--sombra);
+}
+
+.hero-principal { display: flex; align-items: center; gap: 20px; min-width: 0; }
+.hero-icono { flex: none; width: 92px; height: 92px; }
+.hero-icono svg { width: 100%; height: 100%; display: block; }
+
+.hero-lugar {
+  margin: 0 0 2px; font-size: .85rem; font-weight: 560;
+  color: var(--tinta-2); letter-spacing: .01em;
+}
+.hero-temp {
+  margin: 0; font-size: 3.6rem; line-height: 1; font-weight: 300;
+  letter-spacing: -.04em;
+}
+.hero-temp .grado { color: var(--tinta-3); }
+.hero-desc { margin: 6px 0 0; font-size: .88rem; color: var(--tinta-2); }
+
+.hero-detalle {
+  margin: 0; display: grid; gap: 2px 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.hero-detalle > div {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  padding: 7px 0; border-bottom: 1px solid var(--borde);
+}
+.hero-detalle dt { font-size: .82rem; color: var(--tinta-2); }
+.hero-detalle dd {
+  margin: 0; font-size: .88rem; font-weight: 560;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- gráficos ---------- */
+
+.grafico { margin: 0 0 18px; }
+.grafico:last-of-type { margin-bottom: 8px; }
+
+.grafico-titulo {
+  font-size: .8rem; color: var(--tinta-2); font-weight: 560; margin-bottom: 6px;
+}
+.grafico-titulo .unidad { color: var(--tinta-3); font-weight: 400; }
+
+.lienzo { position: relative; height: 190px; }
+.lienzo-bajo { height: 110px; }
+.lienzo svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+.rejilla { stroke: var(--grid); stroke-width: 1; }
+.eje { stroke: var(--eje); stroke-width: 1; }
+.marca-txt {
+  fill: var(--tinta-3); font-size: 10px;
+  font-family: system-ui, sans-serif; font-variant-numeric: tabular-nums;
+}
+
+.linea-serie { fill: none; stroke: var(--serie-1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.area-serie { fill: url(#degradado-temp); }
+.punto-final { fill: var(--serie-1); stroke: var(--superficie); stroke-width: 2; }
+.etiqueta-final { fill: var(--tinta); font-size: 11px; font-weight: 620; font-family: system-ui, sans-serif; }
+
+.barra-lluvia { fill: var(--serie-lluvia); }
+
+.cursor-linea { stroke: var(--tinta-3); stroke-width: 1; stroke-dasharray: 3 3; }
+.cursor-punto { fill: var(--serie-1); stroke: var(--superficie); stroke-width: 2; }
+
+.globo {
+  position: absolute; pointer-events: none; z-index: 5;
+  background: var(--superficie); color: var(--tinta);
+  border: 1px solid var(--borde); border-radius: 10px;
+  box-shadow: var(--sombra);
+  padding: 8px 10px; font-size: .78rem; white-space: nowrap;
+  transform: translate(-50%, -100%); margin-top: -10px;
+  opacity: 0; transition: opacity .12s;
+}
+.globo strong { font-variant-numeric: tabular-nums; }
+.globo-hora { display: block; color: var(--tinta-3); font-size: .72rem; margin-bottom: 2px; }
+
+.sin-datos {
+  display: grid; place-items: center; height: 100%;
+  color: var(--tinta-3); font-size: .82rem;
+}
+
+/* Sin datos no hace falta reservar la altura del gráfico. */
+.lienzo-vacio { height: auto; }
+.lienzo-vacio .sin-datos {
+  height: auto; padding: 14px 0; justify-items: start;
+  font-style: italic;
+}
+
+/* ---------- tabla alterna ---------- */
+
+.tabla-alterna { margin-top: 14px; border-top: 1px solid var(--borde); padding-top: 12px; }
+.tabla-alterna summary {
+  cursor: pointer; font-size: .82rem; color: var(--tinta-2); width: fit-content;
+}
+.tabla-envoltorio { overflow-x: auto; max-height: 320px; overflow-y: auto; margin-top: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: .8rem; }
+th, td {
+  text-align: right; padding: 6px 10px; white-space: nowrap;
+  border-bottom: 1px solid var(--borde); font-variant-numeric: tabular-nums;
+}
+th {
+  position: sticky; top: 0; background: var(--superficie);
+  color: var(--tinta-2); font-weight: 560; text-align: right;
+}
+th:first-child, td:first-child { text-align: left; }
+
+/* ---------- pronóstico ---------- */
+
+.dias {
+  display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(126px, 1fr));
+}
+
+.dia {
+  border: 1px solid var(--borde); border-radius: 12px;
+  padding: 14px 12px; background: var(--superficie);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  text-align: center;
+  transition: border-color .15s, transform .15s;
+}
+.dia:hover { border-color: color-mix(in oklab, var(--serie-1) 45%, var(--borde)); }
+.dia-hoy { border-color: color-mix(in oklab, var(--serie-1) 55%, var(--borde)); }
+
+.dia-nombre { font-size: .78rem; font-weight: 620; letter-spacing: .01em; }
+.dia-fecha { font-size: .72rem; color: var(--tinta-3); margin-top: -6px; }
+.dia-icono { width: 44px; height: 44px; }
+.dia-icono svg { width: 100%; height: 100%; display: block; }
+.dia-temps { font-size: .9rem; font-variant-numeric: tabular-nums; }
+.dia-max { font-weight: 620; }
+.dia-min { color: var(--tinta-3); }
+.dia-desc { font-size: .74rem; color: var(--tinta-2); line-height: 1.35; }
+
+/* ---------- mapa ---------- */
+
+.mapa-envoltorio { overflow-x: auto; }
+#mapa svg { display: block; width: 100%; height: auto; min-width: 320px; }
+
+/* El país es contexto, no dato: tinta recesiva para que manden los puntos.
+   Pero el borde necesita su propia variable: con --linea, el trazo (#232d3d)
+   y el relleno (#1c2534) eran casi el mismo color y los departamentos no se
+   distinguían. --mapa-linea tiene contraste medido contra el relleno. */
+.mapa-depto {
+  fill: var(--superficie-2);
+  stroke: var(--mapa-linea);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+
+.mapa-punto { stroke: var(--superficie); stroke-width: 1.5; }
+.mapa-etiqueta {
+  fill: var(--tinta); font-size: 11px; font-weight: 600;
+  font-family: system-ui, sans-serif;
+  font-variant-numeric: tabular-nums; pointer-events: none;
+}
+
+/* ---------- colofón / ficha técnica ---------- */
+
+.colofon-texto {
+  margin: 0 0 12px; max-width: 68ch;
+  font-size: .86rem; color: var(--tinta-2); line-height: 1.6;
+}
+.colofon-texto strong { color: var(--tinta); font-weight: 620; }
+
+.ficha-titulo {
+  margin: 22px 0 10px; font-size: .82rem; font-weight: 620;
+  text-transform: uppercase; letter-spacing: .06em; color: var(--tinta-3);
+}
+
+.ficha {
+  margin: 0; display: grid; gap: 0 28px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+.ficha > div {
+  display: grid; grid-template-columns: 116px 1fr; gap: 12px;
+  padding: 8px 0; border-bottom: 1px solid var(--borde);
+  font-size: .82rem; align-items: baseline;
+}
+.ficha dt { color: var(--tinta-3); }
+.ficha dd { margin: 0; color: var(--tinta-2); }
+.ficha code {
+  font-size: .95em; padding: 1px 4px; border-radius: 4px;
+  background: var(--superficie-2); color: var(--tinta-2);
+}
+
+.colofon-nota {
+  margin: 18px 0 0; max-width: 68ch;
+  font-size: .8rem; color: var(--tinta-3); line-height: 1.55;
+}
+
+/* En ancho, prosa y ficha van lado a lado. Antes la prosa iba sola a 68ch y la
+   ficha debajo a tres columnas, así que la mitad derecha del panel quedaba
+   vacía y la última fila de la ficha terminaba coja. */
+.colofon-cuerpo { display: grid; gap: 4px 44px; }
+
+@media (min-width: 1000px) {
+  .colofon-cuerpo {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+  .colofon-ficha .ficha-titulo { margin-top: 0; }
+  .colofon-ficha .ficha { grid-template-columns: 1fr; }
+}
+
+/* ---------- pie ---------- */
+
+.pie {
+  position: relative;
+  max-width: var(--ancho); margin: 0 auto; padding: 28px 20px 40px;
+  color: var(--tinta-3); font-size: .8rem;
+}
+
+/* El cielo va fijo al viewport, así que al llegar al fondo el pie queda sobre
+   la parte baja del degradado —con sol, un naranja de amanecer— y el texto
+   gris se vuelve ilegible. Un velo a todo el ancho lo despega del fondo sin
+   cortar la animación: va en z-index negativo, por debajo del propio texto
+   pero por encima de `.cielo`, que está antes en el DOM. */
+.pie::before {
+  content: ''; position: absolute; z-index: -1; pointer-events: none;
+  left: 50%; transform: translateX(-50%); width: 100vw; top: 0; bottom: 0;
+  background: linear-gradient(180deg, transparent, var(--velo-pie) 55%);
+}
+
+.pie p { margin: 0 0 4px; }
+.pie-sello { font-variant-numeric: tabular-nums; }
+
+/* ---------- angosto ---------- */
+
+@media (max-width: 720px) {
+  .hero { grid-template-columns: 1fr; padding: 22px; gap: 18px; }
+  .hero-temp { font-size: 3rem; }
+  .hero-icono { width: 72px; height: 72px; }
+  .panel { padding: 16px; }
+  .barra { padding: 16px 16px 4px; }
+  main { padding: 8px 16px 32px; }
+  .pie { padding: 0 16px 32px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+/* ---------- error de carga ---------- */
+
+.error-carga {
+  max-width: 62ch; margin: 48px auto; padding: 22px 24px;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-left: 4px solid var(--alerta-naranja);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+}
+.error-titulo { margin: 0 0 8px; font-size: .95rem; font-weight: 620; }
+.error-detalle {
+  margin: 0 0 10px; font-size: .82rem; color: var(--tinta-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  word-break: break-all;
+}
+.error-pista { margin: 0; font-size: .82rem; color: var(--tinta-3); line-height: 1.55; }
+
+/* Departamento bajo alerta: el color lo pone el JS con el valor de INUMET. */
+.mapa-depto-alerta { transition: fill-opacity .15s; }
+.mapa-depto-alerta:hover { fill-opacity: .5 !important; }
+
+/* Días sin detalle de INUMET: rótulo corto, deliberadamente más tenue. */
+.dia-desc-breve { color: var(--tinta-3); font-style: italic; }
+
+/* Área bajo alerta: se dibuja sobre los departamentos, dejándolos ver. */
+.mapa-area-alerta { transition: opacity .15s; }
+.mapa-area-alerta:hover { opacity: .75; }
+
+/* Sombra del contorno, para que el borde no se pierda sobre zonas claras. */
+.mapa-halo-alerta {
+  fill: none; stroke: rgba(6, 10, 18, .55); stroke-width: 6;
+  stroke-linejoin: round; pointer-events: none;
+}
+
+/* ==========================================================================
+   Cielo ambiental
+   Capas fijas detrás de todo. Es atmósfera, no dato: nunca compite con los
+   números, que van sobre paneles con fondo propio.
+   ========================================================================== */
+
+.cielo { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.cielo > * { position: absolute; inset: 0; }
+
+/* Velo del tema.
+   El cielo muestra la hora y el clima REALES: a las 10 de la mañana es de día
+   aunque tengas la web en negro. Pero un azul de mediodía a plena intensidad
+   detrás de paneles oscuros deslumbra, así que el tema oscuro lo baja con este
+   velo — cambia el brillo, no lo que el cielo está diciendo.
+   Va en ::before con z-index porque ::after ya lo ocupa la niebla. */
+.cielo::before {
+  content: ''; position: absolute; inset: 0; z-index: 5; pointer-events: none;
+  background: var(--velo-cielo, transparent);
+  transition: background 1.2s ease;
+}
+
+.cielo-grad { transition: background 1.2s ease; }
+
+/* `screen` es lo que lo convierte en luz: el astro se suma al cielo en vez de
+   taparlo. Pintado normal, sobre un fondo oscuro, un degradado cálido se lee
+   como una mancha gris apoyada encima. El latido es apenas perceptible y
+   evita que quede como una calcomanía. */
+.cielo-astro {
+  inset: auto;
+  mix-blend-mode: screen;
+  transition: opacity 1.2s ease, background 1.2s ease;
+  animation: latir 11s ease-in-out infinite alternate;
+  will-change: opacity, transform;
+}
+/* Sobre un cielo diurno claro, `screen` lava el astro hasta hacerlo
+   desaparecer: ahí se pinta normal, que ya lee como sol. */
+:root[data-tema="claro"] .cielo-astro { mix-blend-mode: normal; }
+
+@keyframes latir {
+  from { transform: scale(1) }
+  to   { transform: scale(1.05) }
+}
+
+.cielo-estrellas, .cielo-nubes { transition: opacity 1.2s ease; }
+
+.cielo-estrellas span {
+  position: absolute; border-radius: 50%; background: #fff;
+  animation: titilar 3s ease-in-out infinite;
+}
+@keyframes titilar { 0%, 100% { opacity: .25 } 50% { opacity: .95 } }
+
+/* La nube arrastra; el cuerpo flota y desenfoca. Son dos elementos porque cada
+   uno anima su propio `transform` — juntos habría que combinarlos a mano. */
+.cielo-nubes .nube {
+  position: absolute; left: -45%;
+  animation: derivar linear infinite;
+  will-change: transform;
+}
+.cielo-nubes .nube-cuerpo {
+  position: relative; display: block;
+  animation: flotar ease-in-out infinite alternate;
+  will-change: transform;
+}
+/* Cada lóbulo es una elipse suelta; el blur del padre los funde. El tinte lo
+   fija `aplicarCielo` según la condición. */
+.cielo-nubes .nube i {
+  position: absolute; border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%,
+    var(--nube-a, rgba(214, 224, 250, .85)),
+    var(--nube-b, rgba(150, 168, 205, .32)) 70%, transparent 73%);
+}
+@keyframes derivar {
+  from { transform: translateX(0) }
+  to   { transform: translateX(190vw) }
+}
+@keyframes flotar {
+  from { transform: translateY(-7px) }
+  to   { transform: translateY(7px) }
+}
+
+.cielo-con-niebla::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent, rgba(226, 232, 240, .45) 60%, rgba(226, 232, 240, .62));
+  backdrop-filter: blur(1.5px);
+}
+
+.cielo-lluvia { width: 100%; height: 100%; opacity: 0; transition: opacity .8s ease; }
+
+.cielo-flash {
+  background: radial-gradient(120% 80% at 60% 10%, rgba(210, 225, 255, .9), transparent 60%);
+  opacity: 0; mix-blend-mode: screen;
+}
+
+/* Con el cielo detrás, los paneles se despegan del fondo. */
+body { background: transparent; }
+.panel, .hero, .aviso, .error-carga {
+  backdrop-filter: blur(14px) saturate(1.1);
+  background-color: color-mix(in oklab, var(--superficie) 82%, transparent);
+}
+/* En claro el fondo puede ser un cielo de tormenta gris medio, bastante más
+   contrastado que el navy del oscuro: los paneles necesitan algo más de cuerpo
+   para que el texto no se apoye sobre las nubes. */
+:root[data-tema="claro"] .panel,
+:root[data-tema="claro"] .hero,
+:root[data-tema="claro"] .aviso,
+:root[data-tema="claro"] .error-carga {
+  background-color: color-mix(in oklab, var(--superficie) 91%, transparent);
+}
+.hero { background-image: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cielo-nubes .nube, .cielo-nubes .nube-cuerpo,
+  .cielo-estrellas span, .cielo-astro { animation: none; }
+  .cielo-lluvia { display: none; }
+}
+
+/* ==========================================================================
+   Layout en grilla — antes era una sola columna larguísima
+   ========================================================================== */
+
+@media (min-width: 1000px) {
+  main {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    /* stretch (el valor por defecto) y no start: con start, series y mapa
+       terminaban a alturas distintas y los dos bordes inferiores quedaban
+       desparejos, que es de lo primero que se nota en una grilla de tarjetas. */
+    gap: 20px;
+  }
+  /* A todo lo ancho: lo que necesita aire horizontal. */
+  .avisos, .hero, .panel-pronostico, .colofon { grid-column: 1 / -1; }
+  /* Las series y el mapa conviven lado a lado en vez de apilarse. */
+  .panel-series { grid-column: 1; }
+  /* Sin sticky: el panel del mapa es más alto que muchas pantallas y al
+     scrollear se traba a mitad de camino en vez de acompañar. Un sticky solo
+     sirve si el elemento entra entero en el viewport. */
+  .panel-mapa { grid-column: 2; }
+
+  /* Al emparejar alturas, al panel de series le sobraba espacio abajo. En vez
+     de dejarlo como hueco, se lo lleva el gráfico de temperatura: gana
+     resolución vertical, que es dato, no relleno. graficoLinea ya dibuja con
+     cont.clientHeight, así que basta con dejar crecer al contenedor. */
+  .panel-series { display: flex; flex-direction: column; }
+  .panel-series .grafico:first-of-type {
+    flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0;
+  }
+  .panel-series .grafico:first-of-type .lienzo {
+    flex: 1 1 auto; height: auto; min-height: 190px;
+  }
+}
+
+/* Numeración de secciones, para que la lectura tenga orden. */
+.panel-cabecera { counter-increment: seccion; }
+.panel h2::before {
+  content: '0' counter(seccion);
+  margin-right: 10px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: var(--amb, var(--serie-1));
+  opacity: .8;
+}
+main { counter-reset: seccion; }
+
+/* El acento del sitio sigue al cielo. */
+
+/* ==========================================================================
+   Panel de pruebas
+   Solo aparece en local o con ?pruebas. Deliberadamente sobrio y despegado del
+   resto: es andamiaje, no parte del sitio.
+   ========================================================================== */
+
+.pruebas-abrir {
+  position: fixed; right: 16px; bottom: 16px; z-index: 40;
+  padding: 9px 16px; border-radius: 999px;
+  border: 1px solid var(--borde);
+  background: color-mix(in oklab, var(--superficie) 92%, transparent);
+  color: var(--tinta-2);
+  font: inherit; font-size: .78rem; letter-spacing: .02em; cursor: pointer;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, .45);
+}
+.pruebas-abrir:hover { color: var(--tinta); border-color: var(--tinta-3); }
+.pruebas-abrir.activo { background: var(--superficie-2); color: var(--tinta); }
+
+.pruebas {
+  position: fixed; right: 16px; bottom: 62px; z-index: 40;
+  width: min(330px, calc(100vw - 32px));
+  padding: 14px 16px 16px; border-radius: 14px;
+  border: 1px solid var(--borde);
+  background: color-mix(in oklab, var(--superficie) 95%, transparent);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .55);
+}
+.pruebas[hidden] { display: none; }
+
+.prueba-titulo {
+  margin: 0 0 8px; font-size: .68rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .09em; color: var(--tinta-3);
+}
+.prueba-titulo:not(:first-child) { margin-top: 16px; }
+
+.prueba-fila { display: flex; flex-wrap: wrap; gap: 6px; }
+.prueba-fila-pie { margin-top: 16px; }
+
+.prueba-btn {
+  padding: 6px 11px; border-radius: 8px;
+  border: 1px solid var(--borde);
+  background: var(--superficie-2); color: var(--tinta-2);
+  font: inherit; font-size: .76rem; cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.prueba-btn:hover { background: var(--linea); color: var(--tinta); }
+.prueba-btn.activo {
+  background: color-mix(in oklab, var(--amb, #9db8ff) 26%, transparent);
+  border-color: color-mix(in oklab, var(--amb, #9db8ff) 55%, transparent);
+  color: var(--tinta);
+}
+
+/* Los escenarios de alerta llevan su color, para no tener que leer el rótulo. */
+.prueba-amarilla { border-left: 3px solid #FFD800; }
+.prueba-naranja  { border-left: 3px solid #FF6A00; }
+.prueba-roja     { border-left: 3px solid #E00000; }
+.prueba-dos      { border-left: 3px solid #FF6A00; border-right: 3px solid #FFD800; }
+.prueba-tres     { border-left: 3px solid #E00000; border-right: 3px solid #FFD800; }
+
+.prueba-volver { width: 100%; justify-content: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .prueba-btn { transition: none; }
+}
+
+/* ==========================================================================
+   Móvil
+   ========================================================================== */
+
+@media (max-width: 720px) {
+  /* El cielo con blur y lluvia en canvas es caro en un teléfono: bajamos el
+     desenfoque de las nubes y el vidrio de los paneles. El !important es
+     necesario porque el blur va inline (lo fija el plano de profundidad) y
+     un inline le gana a cualquier regla de hoja. */
+  .cielo-nubes .nube-cuerpo { filter: blur(16px) !important; }
+  .panel, .hero, .aviso, .error-carga { backdrop-filter: blur(8px); }
+
+  .hero-detalle { grid-template-columns: 1fr; }
+  .hero-principal { gap: 14px; }
+  .hero-temp { font-size: 2.8rem; }
+
+  /* Tarjetas del pronóstico: en vez de apretarse a 7 por fila, se deslizan. */
+  .dias {
+    display: flex; overflow-x: auto; gap: 10px;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 6px;
+    margin-inline: -16px; padding-inline: 16px;
+    scrollbar-width: thin;
+  }
+  .dia { flex: 0 0 132px; scroll-snap-align: start; }
+
+  .ficha > div { grid-template-columns: 1fr; gap: 2px; padding: 10px 0; }
+  .panel h2::before { margin-right: 6px; }
+  .barra { gap: 10px; }
+  /* La fila de acciones ocupa el ancho completo y el selector es lo elástico:
+     sin esto el select empuja el botón de tema fuera de pantalla, y como el
+     body no scrollea en horizontal, el botón directamente desaparecía. */
+  .barra-acciones { width: 100%; }
+  .selector { flex: 1; min-width: 0; }
+  .selector select { max-width: 100%; width: 100%; }
+
+  /* La tabla de datos no debe empujar el ancho de la página. */
+  .tabla-envoltorio { margin-inline: -16px; padding-inline: 16px; }
+}
+
+/* Nada debe desbordar horizontalmente, en ningún ancho. */
+html, body { overflow-x: hidden; }
+
+/* ==========================================================================
+   El hero es la ventana al cielo
+   Sin fondo propio: el cielo animado pasa a través. Es lo único que le da
+   presencia real a la animación — con vidrio encima casi no se percibe.
+   ========================================================================== */
+
+.hero {
+  background: none;
+  backdrop-filter: none;
+  border-color: transparent;
+  box-shadow: none;
+  padding: 46px 28px 40px;
+  min-height: 260px;
+}
+
+/* Sobre cielo variable, el texto necesita su propio contraste. */
+.hero-lugar, .hero-temp, .hero-desc {
+  text-shadow: 0 1px 14px color-mix(in oklab, var(--plano) 75%, transparent);
+}
+.hero-temp { font-size: 4.6rem; font-weight: 200; }
+.hero-lugar { font-size: .95rem; letter-spacing: .04em; text-transform: uppercase; }
+.hero-icono { width: 116px; height: 116px; filter: drop-shadow(0 4px 16px rgba(0, 0, 0, .18)); }
+
+/* Las métricas sí llevan una lámina, si no se pierden contra las nubes. */
+.hero-detalle {
+  background: color-mix(in oklab, var(--superficie) 70%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 6px 18px;
+}
+
+@media (max-width: 720px) {
+  .hero { padding: 30px 18px 26px; min-height: 0; }
+  .hero-temp { font-size: 3.4rem; }
+  .hero-icono { width: 84px; height: 84px; }
+}
