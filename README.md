@@ -173,7 +173,7 @@ junto al sitio.
                                  │
                    node tools/generar.mjs dist
                                  │
-clima.anderkitty.pink  ◄──  gh-pages  (sitio + api/*.json)
+clima.anderkitty.com  ◄──  gh-pages  (sitio + api/*.json)
 ```
 
 Los archivos que produce son exactamente las rutas que sirve `server.js`
@@ -185,7 +185,7 @@ producción. Para desarrollar alcanza con `node server.js`.
 una URL ahí vuelve a apuntar a un backend propio, por si algún día el scraping
 tiene que correr fuera de CI.
 
-> **Nota histórica.** Hubo una API en un VPS (`api-clima.anderkitty.pink`), con
+> **Nota histórica.** Hubo una API en un VPS (`api-clima.anderkitty.com`), con
 > Caddy y límites de cgroup para convivir con un scanner que barría 2.5 M de IPs
 > por día. El proveedor suspendió la red de esa máquina y el sitio se cayó
 > entero. Generar en CI eliminó esa dependencia. Los archivos de `deploy/` siguen
